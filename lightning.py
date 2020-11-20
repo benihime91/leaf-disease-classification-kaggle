@@ -50,7 +50,7 @@ class LitModel(pl.LightningModule):
             model = nn.Sequential(
                 classifier,
                 hidden_layers,
-                nn.Linear(512, self.output_dims)
+                nn.Linear(hidden_dims, self.output_dims)
             )
 
         # set model as class attribute
