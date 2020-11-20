@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
 # C extensions
 *.so
 
@@ -76,6 +77,8 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+# vscode
+.vscode
 
 # IPython
 profile_default/
