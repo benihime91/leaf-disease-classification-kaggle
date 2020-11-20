@@ -1,14 +1,27 @@
+from typing import Optional
+
+import pandas as pd
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.metrics.functional import accuracy
 from torch import nn
 from torchvision import models
+import albumentations as A
 
 from datasets import PlantDataset
 
 
 class LitModel(pl.LightningModule):
-    def __init__(self, output_dims, learning_rate, weight_decay, total_steps, class_weights=None):
+    def __init__(self,
+                 output_dims: int,
+                 learning_rate: float,
+                 weight_decay: float,
+                 total_steps: int,
+                 class_weights: Optional[torch.Tensor] = None,
+                 hidden_dims: int = 500,
+                 model: Optional[nn.Module] = None
+                 ):
+
         super().__init__()
         # Set our init args as class attributes
         self.learning_rate = learning_rate
@@ -16,41 +29,32 @@ class LitModel(pl.LightningModule):
         self.total_steps = total_steps
         self.output_dims = output_dims
 
-        classifier = models.resnet50(pretrained=True, progress=True)
-        # dims of outputs of the classifier
-        base_output_dims = classifier.fc.out_features
-        # unfreeze the classifier
-        classifier.requires_grad_(True)
+        if model is None:
+            classifier = models.resnext50_32x4d(pretrained=True, progress=True)
+            classifier.requires_grad_(True)
 
-        lin_1 = nn.Sequential(
-            nn.BatchNorm1d(base_output_dims),
-            nn.Dropout(0.25),
-            nn.ReLU(),
-        )
+            # dims of outputs of the classifier
+            base_output_dims = classifier.fc.out_features
 
-        lin_2 = nn.Sequential(
-            nn.Linear(base_output_dims, 1024),
-            nn.BatchNorm1d(1024),
-            nn.Dropout(0.25),
-            nn.ReLU(),
-        )
+            hidden_layers = nn.Sequential(
+                nn.BatchNorm1d(base_output_dims),
+                nn.Dropout(0.5),
+                nn.ReLU(inplace=True),
+                nn.Linear(base_output_dims, hidden_dims),
+                nn.BatchNorm1d(hidden_dims),
+                nn.Dropout(0.5),
+                nn.ReLU(inplace=True),
+            )
 
-        lin_3 = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
-            nn.Dropout(0.5),
-            nn.ReLU(),
-        )
+            # Define PyTorch model
+            model = nn.Sequential(
+                classifier,
+                hidden_layers,
+                nn.Linear(512, self.output_dims)
+            )
 
-        # Define PyTorch model
-        self.model = nn.Sequential(
-            classifier,
-            lin_1,
-            lin_2,
-            lin_3,
-            nn.Linear(512, self.output_dims)
-        )
-
+        # set model as class attribute
+        self.model = model
         # Define loss function
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
@@ -81,14 +85,27 @@ class LitModel(pl.LightningModule):
         return self.validation_step(batch, batch_idx)
 
     def configure_optimizers(self):
-        opt = torch.optim.AdamW(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-        sch = torch.optim.lr_scheduler.OneCycleLR(opt, total_steps=self.total_steps, max_lr=self.learning_rate)
+        # init AdamW optimizer and OneCycleLR Scheduler
+        opt = torch.optim.AdamW(
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+
+        sch = torch.optim.lr_scheduler.OneCycleLR(
+            opt, total_steps=self.total_steps, max_lr=self.learning_rate)
+
         sch = {"scheduler": sch, "interval": "step", "frequency": 1, }
+
         return [opt], [sch]
 
 
 class LitDatatModule(pl.LightningDataModule):
-    def __init__(self, df_train, df_valid, df_test, batch_size, transforms):
+    def __init__(self,
+                 df_train: pd.DataFrame,
+                 df_valid: pd.DataFrame,
+                 df_test: pd.DataFrame,
+                 batch_size: int,
+                 transforms: A.Compose
+                 ):
+
         super().__init__()
         # Set our init args as class attributes
         self.df_train = df_train
