@@ -2,10 +2,6 @@ import torch
 import random
 import cv2
 
-# set seeds
-seed = 42
-random.seed(42)
-torch.manual_seed(42)
 
 class PlantDataset(torch.utils.data.Dataset):
     def __init__(self, dataframe, transformations):

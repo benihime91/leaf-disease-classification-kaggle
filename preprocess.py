@@ -7,7 +7,6 @@ import json
 import warnings
 
 # Setup
-np.random.seed(42)
 warnings.filterwarnings("ignore")
 pd.set_option("display.max_colwidth", None)
 
