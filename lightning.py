@@ -18,7 +18,7 @@ class LitModel(pl.LightningModule):
 
         classifier = models.resnet50(pretrained=True, progress=True)
         # dims of outputs of the classifier
-        base_output_dims = self.classifier.fc.out_features
+        base_output_dims = classifier.fc.out_features
         # unfreeze the classifier
         classifier.requires_grad_(True)
 
