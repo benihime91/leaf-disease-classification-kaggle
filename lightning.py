@@ -18,7 +18,7 @@ class LitModel(pl.LightningModule):
                  weight_decay: float,
                  total_steps: int,
                  class_weights: Optional[torch.Tensor] = None,
-                 hidden_dims: int = 500,
+                 hidden_dims: int = 512,
                  model: Optional[nn.Module] = None
                  ):
 
@@ -30,26 +30,26 @@ class LitModel(pl.LightningModule):
         self.output_dims = output_dims
 
         if model is None:
-            classifier = models.resnext50_32x4d(pretrained=True, progress=True)
-            classifier.requires_grad_(True)
+            self.classifier = models.resnext50_32x4d(pretrained=True, progress=True)
+            self.classifier.requires_grad_(True)
 
             # dims of outputs of the classifier
-            base_output_dims = classifier.fc.out_features
+            self.base_output_dims = self.classifier.fc.out_features
 
-            hidden_layers = nn.Sequential(
+            self.hidden_layers = nn.Sequential(
                 nn.BatchNorm1d(base_output_dims),
-                nn.Dropout(0.5),
+                nn.Dropout(0.25),
                 nn.ReLU(inplace=True),
                 nn.Linear(base_output_dims, hidden_dims),
                 nn.BatchNorm1d(hidden_dims),
-                nn.Dropout(0.5),
+                nn.Dropout(0.25),
                 nn.ReLU(inplace=True),
             )
 
             # Define PyTorch model
             model = nn.Sequential(
-                classifier,
-                hidden_layers,
+                self.classifier,
+                self.hidden_layers,
                 nn.Linear(hidden_dims, self.output_dims)
             )
 
