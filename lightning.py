@@ -19,47 +19,49 @@ class LitModel(pl.LightningModule):
                  total_steps: int,
                  class_weights: Optional[torch.Tensor] = None,
                  hidden_dims: int = 512,
-                 model: Optional[nn.Module] = None
                  ):
 
         super().__init__()
         # Set our init args as class attributes
         self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
-        self.total_steps = total_steps
-        self.output_dims = output_dims
+        self.weight_decay  = weight_decay
+        self.total_steps   = total_steps
+        self.output_dims   = output_dims
 
-        if model is None:
-            self.classifier = models.resnext50_32x4d(pretrained=True, progress=True)
-            self.classifier.requires_grad_(True)
+        # Define PyTorch model
+        self.classifier = models.resnext50_32x4d(pretrained=True, progress=True)
 
-            # dims of outputs of the classifier
-            self.base_output_dims = self.classifier.fc.out_features
+        # dims of outputs of the classifier
+        self.base_output_dims = self.classifier.fc.out_features
 
-            self.hidden_layers = nn.Sequential(
-                nn.BatchNorm1d(base_output_dims),
-                nn.Dropout(0.25),
-                nn.ReLU(inplace=True),
-                nn.Linear(base_output_dims, hidden_dims),
-                nn.BatchNorm1d(hidden_dims),
-                nn.Dropout(0.25),
-                nn.ReLU(inplace=True),
-            )
+        self.hidden_layers = nn.Sequential(
+            nn.BatchNorm1d(base_output_dims),
+            nn.Dropout(0.25),
+            nn.ReLU(inplace=True),
+            nn.Linear(base_output_dims, hidden_dims),
+            nn.BatchNorm1d(hidden_dims),
+            nn.Dropout(0.25),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dims, self.output_dims)
+        )
 
-            # Define PyTorch model
-            model = nn.Sequential(
-                self.classifier,
-                self.hidden_layers,
-                nn.Linear(hidden_dims, self.output_dims)
-            )
-
-        # set model as class attribute
-        self.model = model
         # Define loss function
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
+    def freeze_classifier(self):
+        for params in self.classifier.parameters():
+            params.requires_grad = False
+
+    def unfreeze_classifier(self):
+        for params in self.classifier.parameters():
+            params.requires_grad = True
+
+
     def forward(self, x):
-        return self.model(x)
+        output = self.classifier(x)
+        output = self.hidden_layers(output)
+        return output
+
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -86,14 +88,12 @@ class LitModel(pl.LightningModule):
 
     def configure_optimizers(self):
         # init AdamW optimizer and OneCycleLR Scheduler
-        opt = torch.optim.AdamW(
-            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        model  = nn.Sequential(self.classifier, self.hidden_layers)
+        params = [p for p in model.parameters() if p.requires_grad]
+        opt    = torch.optim.AdamW(params, lr=self.learning_rate, weight_decay=self.weight_decay)
 
-        sch = torch.optim.lr_scheduler.OneCycleLR(
-            opt, total_steps=self.total_steps, max_lr=self.learning_rate)
-
+        sch = torch.optim.lr_scheduler.OneCycleLR(opt, total_steps=self.total_steps, max_lr=self.learning_rate)
         sch = {"scheduler": sch, "interval": "step", "frequency": 1, }
-
         return [opt], [sch]
 
 
