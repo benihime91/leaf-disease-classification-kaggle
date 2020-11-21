@@ -76,8 +76,8 @@ class Preprocessor:
         "weights for class imbalance"
         weights = {}
         for i in range(5):
-            # sample size / (num classes * class frequency)
-            weights[i] = len(df)/(5 * len(df.loc[df.label == i]))
+            # class frequency / total_size 
+            weights[i] = len(df.loc[df.label == i]) / len(df)
         return weights
 
     def _read_label_map(self, json_path):
