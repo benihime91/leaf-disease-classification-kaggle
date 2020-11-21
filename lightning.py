@@ -136,7 +136,6 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
 # -----------------------------------
 # LIGHTNING DATA MODULE :
 # ------------------------------------
-
 class LitDatatModule(pl.LightningDataModule):
     def __init__(self,
                  df_train: pd.DataFrame,
@@ -144,7 +143,8 @@ class LitDatatModule(pl.LightningDataModule):
                  df_test: pd.DataFrame,
                  batch_size: int,
                  transforms: A.Compose,
-                 **kwargs,
+                 pin_memory: bool = True,
+                 num_workers: int = 0,
                  ):
 
         super().__init__()
@@ -154,6 +154,8 @@ class LitDatatModule(pl.LightningDataModule):
         self.df_test = df_test
         self.batch_size = batch_size
         self.transforms = transforms
+        self.pin_memory = pin_memory
+        self.num_workers = num_workers
 
     def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
@@ -163,14 +165,33 @@ class LitDatatModule(pl.LightningDataModule):
 
         # Assign test dataset for use in dataloader(s)
         if stage == 'test' or stage is None:
-            if self.df_test is not None:
-                self.test = PlantDataset(self.df_test, self.transforms["test"])
+            self.test = PlantDataset(self.df_test, self.transforms["test"])
 
     def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.train, shuffle=True, batch_size=self.batch_size, **kwargs)
+        train_loader = torch.utils.data.DataLoader(
+            self.train, 
+            shuffle=True, 
+            batch_size=self.batch_size, 
+            pin_memory=self.pin_memory, 
+            num_workers=self.num_workers,
+            )
+        return train_loader
 
     def val_dataloader(self):
-        return torch.utils.data.DataLoader(self.valid, batch_size=self.batch_size, **kwargs)
+        val_loader = torch.utils.data.DataLoader(
+            self.valid, 
+            batch_size=self.batch_size,
+            pin_memory=self.pin_memory, 
+            num_workers=self.num_workers,
+            )
+
+        return val_loader
 
     def test_dataloader(self):
-        return torch.utils.data.DataLoader(self.test, batch_size=self.batch_size, **kwargs)
+        test_loader = torch.utils.data.DataLoader(
+            self.test, 
+            batch_size=self.batch_size, 
+            pin_memory=self.pin_memory, 
+            num_workers=self.num_workers,
+            )
+        return test_loader
