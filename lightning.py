@@ -11,7 +11,11 @@ import albumentations as A
 from datasets import PlantDataset
 
 
-class LitModel(pl.LightningModule):
+# -----------------------------------
+# LIGHTNING MODULE :
+# ------------------------------------
+
+class OneCycleAdamWLitModel(pl.LightningModule):
     def __init__(self,
                  output_dims: int,
                  learning_rate: float,
@@ -20,6 +24,17 @@ class LitModel(pl.LightningModule):
                  class_weights: Optional[torch.Tensor] = None,
                  hidden_dims: int = 512,
                  ):
+        """
+        Lightning Module with resnext50_32x4d backbone, AdamW optimizer and OneCycleScheduler
+
+        Args:
+            1. output_dims: number of output classes
+            2. learning_rate: learning_rate for AdamW optimizer
+            3. weight_decay: weight_decay for AdamW optimizer
+            4. total_steps: number of total steps to train for 
+            5. class_weights: a tensor containing the weights for nn.CrossEntropyLoss
+            6. hidden_dims: number of nodes of the hidden layer connecting the base and output
+        """
 
         super().__init__()
         # Set our init args as class attributes
@@ -35,10 +50,10 @@ class LitModel(pl.LightningModule):
         self.base_output_dims = self.classifier.fc.out_features
 
         self.hidden_layers = nn.Sequential(
-            nn.BatchNorm1d(base_output_dims),
+            nn.BatchNorm1d(self.base_output_dims),
             nn.Dropout(0.25),
             nn.ReLU(inplace=True),
-            nn.Linear(base_output_dims, hidden_dims),
+            nn.Linear(self.base_output_dims, hidden_dims),
             nn.BatchNorm1d(hidden_dims),
             nn.Dropout(0.25),
             nn.ReLU(inplace=True),
@@ -47,6 +62,21 @@ class LitModel(pl.LightningModule):
 
         # Define loss function
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+        
+
+    def configure_optimizers(self):
+        opt_fn = torch.optim.AdamW
+        sch_fn = torch.optim.lr_scheduler.OneCycleLR
+
+        # init AdamW optimizer and OneCycleLR Scheduler
+        model  = nn.Sequential(self.classifier, self.hidden_layers)
+        params = [p for p in model.parameters() if p.requires_grad]
+        
+        opt = opt_fn(params, lr=(self.lr or self.learning_rate), weight_decay=self.weight_decay, betas=(0.9, 0.99))
+        
+        sch = sch_fn(opt, total_steps=self.total_steps, max_lr=self.learning_rate,)
+        
+        return [opt], [sch]
 
     def freeze_classifier(self):
         for params in self.classifier.parameters():
@@ -86,16 +116,12 @@ class LitModel(pl.LightningModule):
         # Here we just reuse the validation_step for testing
         return self.validation_step(batch, batch_idx)
 
-    def configure_optimizers(self):
-        # init AdamW optimizer and OneCycleLR Scheduler
-        model  = nn.Sequential(self.classifier, self.hidden_layers)
-        params = [p for p in model.parameters() if p.requires_grad]
-        opt    = torch.optim.AdamW(params, lr=self.learning_rate, weight_decay=self.weight_decay)
 
-        sch = torch.optim.lr_scheduler.OneCycleLR(opt, total_steps=self.total_steps, max_lr=self.learning_rate)
-        sch = {"scheduler": sch, "interval": "step", "frequency": 1, }
-        return [opt], [sch]
 
+
+# -----------------------------------
+# LIGHTNING DATA MODULE :
+# ------------------------------------
 
 class LitDatatModule(pl.LightningDataModule):
     def __init__(self,
