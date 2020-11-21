@@ -76,7 +76,7 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
         
         opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, betas=(0.9, 0.99))
         
-        sch = sch_fn(opt, T_0=10, T_mult=1, last_epoch=-1, eta_min=1e-07)
+        sch = sch_fn(opt, T_0=10, T_mult=2, last_epoch=-1, eta_min=1e-07)
 
         sch = {"scheduler":sch, "interval": "step", "frequency":1}
         
