@@ -60,6 +60,9 @@ class OneCycleAdamWLitModel(pl.LightningModule):
             nn.Linear(hidden_dims, self.output_dims)
         )
 
+        # model
+        self.net = nn.Sequential(self.classifier, self.hidden_layers)
+
         # Define loss function
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
         
@@ -69,8 +72,7 @@ class OneCycleAdamWLitModel(pl.LightningModule):
         sch_fn = torch.optim.lr_scheduler.OneCycleLR
 
         # init AdamW optimizer and OneCycleLR Scheduler
-        model  = nn.Sequential(self.classifier, self.hidden_layers)
-        params = [p for p in model.parameters() if p.requires_grad]
+        params = [p for p in self.net.parameters() if p.requires_grad]
         
         opt = opt_fn(params, lr=(self.lr or self.learning_rate), weight_decay=self.weight_decay, betas=(0.9, 0.99))
         
@@ -81,16 +83,19 @@ class OneCycleAdamWLitModel(pl.LightningModule):
     def freeze_classifier(self):
         for params in self.classifier.parameters():
             params.requires_grad = False
+        self.net = nn.Sequential(self.classifier, self.hidden_layers)
 
     def unfreeze_classifier(self):
         for params in self.classifier.parameters():
             params.requires_grad = True
+        self.net = nn.Sequential(self.classifier, self.hidden_layers)
 
 
     def forward(self, x):
-        output = self.classifier(x)
-        output = self.hidden_layers(output)
-        return output
+        """Forward pass. Returns logits."""
+        # 1. Feature extraction:
+        # 2. Classifier (returns logits):
+        return self.net(x)
 
 
     def training_step(self, batch, batch_idx):
