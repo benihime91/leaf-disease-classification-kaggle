@@ -25,7 +25,7 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
                  hidden_dims: int = 512,
                  ):
         """
-        Lightning Module with resnext50_32x4d backbone, AdamW optimizer & CosineAnnealingWarmRestarts
+        Lightning Module with resnext50_32x4d backbone, SGD optimizer & CosineAnnealingWarmRestarts
 
         Args:
             1. output_dims: number of output classes
@@ -68,15 +68,15 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
         
 
     def configure_optimizers(self):
-        opt_fn = torch.optim.AdamW
+        opt_fn = torch.optim.SGD
         sch_fn = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
 
         # init AdamW optimizer and OneCycleLR Scheduler
         params = [p for p in self.net.parameters() if p.requires_grad]
         
-        opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, betas=(0.9, 0.99))
+        opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, momentum=0.9)
         
-        sch = sch_fn(opt, T_0=10, T_mult=2, last_epoch=-1, eta_min=1e-07)
+        sch = sch_fn(opt, T_0=10, T_mult=2,)
 
         sch = {"scheduler":sch, "interval": "step", "frequency":1}
         
