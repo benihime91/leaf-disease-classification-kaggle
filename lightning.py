@@ -15,7 +15,7 @@ from datasets import PlantDataset
 # LIGHTNING MODULE :
 # ------------------------------------
 
-class OneCycleAdamWLitModel(pl.LightningModule):
+class LightningModel_resnext50_32x4d(pl.LightningModule):
     def __init__(self,
                  output_dims: int,
                  learning_rate: float,
@@ -25,7 +25,7 @@ class OneCycleAdamWLitModel(pl.LightningModule):
                  hidden_dims: int = 512,
                  ):
         """
-        Lightning Module with resnext50_32x4d backbone, AdamW optimizer and OneCycleScheduler
+        Lightning Module with resnext50_32x4d backbone, AdamW optimizer & CosineAnnealingWarmRestarts
 
         Args:
             1. output_dims: number of output classes
@@ -69,16 +69,16 @@ class OneCycleAdamWLitModel(pl.LightningModule):
 
     def configure_optimizers(self):
         opt_fn = torch.optim.AdamW
-        sch_fn = torch.optim.lr_scheduler.OneCycleLR
+        sch_fn = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
 
         # init AdamW optimizer and OneCycleLR Scheduler
         params = [p for p in self.net.parameters() if p.requires_grad]
         
         opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, betas=(0.9, 0.99))
         
-        sch = sch_fn(opt, total_steps=self.total_steps, max_lr=self.learning_rate,)
+        sch = sch_fn(opt, T_0=10, T_mult=1, last_epoch=-1, eta_min=1e-07)
 
-        sch = {"scheduler":sch, "interval":"step", "frequency":1}
+        sch = {"scheduler":sch, "interval": "step", "frequency":1}
         
         return [opt], [sch]
 
@@ -120,8 +120,15 @@ class OneCycleAdamWLitModel(pl.LightningModule):
         return loss
 
     def test_step(self, batch, batch_idx):
-        # Here we just reuse the validation_step for testing
-        return self.validation_step(batch, batch_idx)
+        x, y = batch
+        logits = self(x)
+        preds = torch.argmax(logits, dim=1)
+
+        loss = self.loss_fn(logits, y)
+        acc = accuracy(preds, y)
+
+        self.log('test_loss', loss, on_step=False, on_epoch=True)
+        self.log('test_acc', acc, on_step=False, on_epoch=True)
 
 
 
