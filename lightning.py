@@ -105,7 +105,7 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
         
         # init optimizer and scheduler
         opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, momentum=0.9)
-        sch = sch_fn(opt, T_0=10, T_mult=2,)
+        sch = sch_fn(opt, T_0=10, T_mult=1,)
         # convert optimizer to lightning format
         sch = {"scheduler": sch, "interval": "step", "frequency":1}
         return [opt], [sch]
