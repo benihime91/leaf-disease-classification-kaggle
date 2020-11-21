@@ -10,6 +10,40 @@ import albumentations as A
 
 from datasets import PlantDataset
 
+# -----------------------------------------
+# Base Model for Transfer Learning
+# ------------------------------------------
+class TransferLearningModel(nn.Module):
+    """
+    Transfer Learning with pre-trained classifier
+
+    Args:
+        classifier: feature extractor for the transfer learning model
+        base: base model for the transfer learning model
+    """
+    def __init__(self, classifier: nn.Module, base: nn.Module):
+        super(TransferLearningModel, self).__init__()
+        # Set our init args as class attributes
+        self.classifier = classifier
+        self.base = base
+
+    def freeze_classifier(self):
+        for params in self.classifier.parameters():
+            params.requires_grad = False
+        self.classifier.eval()
+
+    def unfreeze_classifier(self):
+        for params in self.classifier.parameters():
+            params.requires_grad = True
+        self.classifier.train()
+    
+    def forward(self, x):
+        """Forward pass. Returns logits."""
+        # 1. Feature extraction:
+        features = self.classifier(x)
+        # 2. Classifier (returns logits):
+        logits = self.base(features)
+        return logits
 
 # -----------------------------------
 # LIGHTNING MODULE :
@@ -28,77 +62,62 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
         Lightning Module with resnext50_32x4d backbone, SGD optimizer & CosineAnnealingWarmRestarts
 
         Args:
-            1. output_dims: number of output classes
-            2. learning_rate: learning_rate for AdamW optimizer
-            3. weight_decay: weight_decay for AdamW optimizer
-            4. total_steps: number of total steps to train for 
-            5. class_weights: a tensor containing the weights for nn.CrossEntropyLoss
-            6. hidden_dims: number of nodes of the hidden layer connecting the base and output
+            output_dims: number of output classes
+            learning_rate: learning_rate for AdamW optimizer
+            weight_decay: weight_decay for AdamW optimizer
+            total_steps: number of total steps to train for 
+            class_weights: a tensor containing the weights for nn.CrossEntropyLoss
+            hidden_dims: number of nodes of the hidden layer connecting the base and output
         """
 
         super().__init__()
         # Set our init args as class attributes
         self.learning_rate = learning_rate
-        self.weight_decay  = weight_decay
-        self.total_steps   = total_steps
-        self.output_dims   = output_dims
+        self.weight_decay = weight_decay
+        self.total_steps = total_steps
+        self.output_dims = output_dims
+        self.hidden_dims = hidden_dims
 
-        # Define PyTorch model
-        self.classifier = models.resnext50_32x4d(pretrained=True, progress=True)
+        # # init the pretrained pytorch classifier
+        classifier = models.resnext50_32x4d(pretrained=True, progress=True)
 
-        # dims of outputs of the classifier
-        self.base_output_dims = self.classifier.fc.out_features
-
-        self.hidden_layers = nn.Sequential(
-            nn.BatchNorm1d(self.base_output_dims),
+        # output dims of the last layer of the classifier
+        num_ftrs = classifier.fc.out_features
+        # create the base for the classifier
+        base_model = nn.Sequential(
             nn.Dropout(0.25),
             nn.ReLU(inplace=True),
-            nn.Linear(self.base_output_dims, hidden_dims),
-            nn.BatchNorm1d(hidden_dims),
-            nn.Dropout(0.25),
+            nn.Linear(num_ftrs, self.hidden_dims),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_dims, self.output_dims)
+            nn.Dropout(0.5),
+            nn.Linear(self.hidden_dims, self.output_dims)
         )
 
-        # model
-        self.net = nn.Sequential(self.classifier, self.hidden_layers)
-
+        # transfoer learning network
+        self.net = TransferLearningModel(classifier, base_model)
         # Define loss function
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
         
-
     def configure_optimizers(self):
         opt_fn = torch.optim.SGD
         sch_fn = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
-
-        # init AdamW optimizer and OneCycleLR Scheduler
         params = [p for p in self.net.parameters() if p.requires_grad]
         
+        # init optimizer and scheduler
         opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, momentum=0.9)
-        
         sch = sch_fn(opt, T_0=10, T_mult=2,)
-
-        sch = {"scheduler":sch, "interval": "step", "frequency":1}
-        
+        # convert optimizer to lightning format
+        sch = {"scheduler": sch, "interval": "step", "frequency":1}
         return [opt], [sch]
 
     def freeze_classifier(self):
-        for params in self.classifier.parameters():
-            params.requires_grad = False
-        self.net = nn.Sequential(self.classifier, self.hidden_layers)
+        self.net.freeze_classifier()
 
     def unfreeze_classifier(self):
-        for params in self.classifier.parameters():
-            params.requires_grad = True
-        self.net = nn.Sequential(self.classifier, self.hidden_layers)
-
+        self.net.unfreeze_classifier()
 
     def forward(self, x):
-        """Forward pass. Returns logits."""
-        # 1. Feature extraction:
-        # 2. Classifier (returns logits):
         return self.net(x)
-
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -129,8 +148,6 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
 
         self.log('test_loss', loss, on_step=False, on_epoch=True)
         self.log('test_acc', acc, on_step=False, on_epoch=True)
-
-
 
 
 # -----------------------------------
