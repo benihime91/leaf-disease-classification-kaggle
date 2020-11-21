@@ -143,7 +143,7 @@ class LitDatatModule(pl.LightningDataModule):
                  df_valid: pd.DataFrame,
                  df_test: pd.DataFrame,
                  batch_size: int,
-                 transforms: A.Compose
+                 transforms: A.Compose,
                  **kwargs,
                  ):
 
