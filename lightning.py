@@ -74,7 +74,7 @@ class OneCycleAdamWLitModel(pl.LightningModule):
         # init AdamW optimizer and OneCycleLR Scheduler
         params = [p for p in self.net.parameters() if p.requires_grad]
         
-        opt = opt_fn(params, lr=(self.lr or self.learning_rate), weight_decay=self.weight_decay, betas=(0.9, 0.99))
+        opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, betas=(0.9, 0.99))
         
         sch = sch_fn(opt, total_steps=self.total_steps, max_lr=self.learning_rate,)
         
