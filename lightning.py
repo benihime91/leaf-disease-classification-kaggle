@@ -144,6 +144,7 @@ class LitDatatModule(pl.LightningDataModule):
                  df_test: pd.DataFrame,
                  batch_size: int,
                  transforms: A.Compose
+                 **kwargs,
                  ):
 
         super().__init__()
@@ -166,10 +167,10 @@ class LitDatatModule(pl.LightningDataModule):
                 self.test = PlantDataset(self.df_test, self.transforms["test"])
 
     def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.train, shuffle=True, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(self.train, shuffle=True, batch_size=self.batch_size, **kwargs)
 
     def val_dataloader(self):
-        return torch.utils.data.DataLoader(self.valid, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(self.valid, batch_size=self.batch_size, **kwargs)
 
     def test_dataloader(self):
-        return torch.utils.data.DataLoader(self.test, batch_size=self.batch_size)
+        return torch.utils.data.DataLoader(self.test, batch_size=self.batch_size, **kwargs)
