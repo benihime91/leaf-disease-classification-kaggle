@@ -77,6 +77,8 @@ class OneCycleAdamWLitModel(pl.LightningModule):
         opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, betas=(0.9, 0.99))
         
         sch = sch_fn(opt, total_steps=self.total_steps, max_lr=self.learning_rate,)
+
+        sch = {"scheduler":sch, "interval":"step", "frequency":1}
         
         return [opt], [sch]
 
