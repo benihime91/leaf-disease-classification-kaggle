@@ -2,10 +2,10 @@ training:
   lr: 0.01
   num_classes: 5
   metric: val_loss
-  seed: 42
-  job_name: default
-  checkpoint_path: /kaggle/working/
-  model_save_dir: /kaggle/working/model_weights.pt
+  seed: ${seed}
+  job_name: ${run_name}
+  checkpoint_path: ${checkpoint_path}
+  model_save_dir: ${model_save_dir}
   num_epochs: 10
   image_dim: 224
   dataloaders:

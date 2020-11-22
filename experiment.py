@@ -105,7 +105,7 @@ def run(config: DictConfig):
     chkpt = pl.callbacks.ModelCheckpoint(**trainer_cfg.model_checkpoint)
 
     cb_config = config.lightning.callbacks
-    cbs = [load_obj(module.class_name)(module.params) for module in cb_config]
+    cbs = [load_obj(module.class_name)(**module.params) for module in cb_config]
     # append magePredictionLogger callback to the callback list
     cbs.append(ImagePredictionLogger(samples))
 

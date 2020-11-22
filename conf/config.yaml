@@ -10,6 +10,13 @@ defaults:
 image_dir: /kaggle/input/cassava-leaf-disease-classification/train_images
 csv_dir: /kaggle/input/cassava-leaf-disease-classification/train.csv
 json_dir: /kaggle/input/cassava-leaf-disease-classification/label_num_to_disease_map.json
-fold_csv_dir: data/fold_df.csv
-fold_num: 0
+fold_csv_dir: /kaggle/working/leaf-disease-classification-kaggle/data/fold_df.csv
+
 use_weights: true
+
+fold_num: 0
+run_name: train-fold=0
+checkpoint_path: /kaggle/working/
+model_save_dir: /kaggle/working/weights_stage2_fold=0.pt
+
+seed: 42
