@@ -36,27 +36,3 @@ class InferenceModel(nn.Module):
         features = self.classifier(x)
         logits = self.base(features)
         return logits
-
-
-class Predictor:
-    def __init__(self, model:nn.Module, device:Union[str, torch.device]):
-        self.model = model
-        self.device = device
-        self.model.to(device)
-        self.model.eval()
- 
-    def predict(self, dataloader:torch.utils.data.DataLoader):
-        batch_preds = []
-        batch_idxs  = []
-
-        for batch in tqdm(dataloader, leave=False):
-            image, unique_idx = batch
-            image = image.to(self.device)
-
-            logits = self.model(image)
-            
-            batch_preds += [torch.softmax(logits, 1).detach().cpu().numpy()]
-            batch_idxs = batch_idxs + list(unique_idx)
-
-        batch_preds = np.concatenate(batch_preds, axis=0)
-        return batch_preds, batch_idxs
