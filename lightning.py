@@ -45,10 +45,11 @@ class TransferLearningModel(nn.Module):
         logits = self.base(features)
         return logits
 
+
+
 # -----------------------------------
 # LIGHTNING MODULE :
 # ------------------------------------
-
 class LightningModel_resnext50_32x4d(pl.LightningModule):
     def __init__(self,
                  output_dims: int,
@@ -83,14 +84,21 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
 
         # output dims of the last layer of the classifier
         num_ftrs = classifier.fc.out_features
+        h2 = int(self.hidden_dims / 2)
         # create the base for the classifier
         base_model = nn.Sequential(
-            nn.Dropout(0.25),
+            nn.BatchNorm1d(num_ftrs),
             nn.ReLU(inplace=True),
+            nn.Dropout(0.25),
             nn.Linear(num_ftrs, self.hidden_dims),
+            nn.BatchNorm1d(self.hidden_dims),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.25),
+            nn.Linear(self.hidden_dims, h2),
+            nn.BatchNorm1d(h2),
             nn.ReLU(inplace=True),
             nn.Dropout(0.5),
-            nn.Linear(self.hidden_dims, self.output_dims)
+            nn.Linear(h2, self.output_dims)
         )
 
         # transfoer learning network
@@ -98,17 +106,25 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
         # Define loss function
         self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
         
-    def configure_optimizers(self):
-        opt_fn = torch.optim.SGD
-        sch_fn = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
-        params = [p for p in self.net.parameters() if p.requires_grad]
+        # set optimizer and scheduler as class attributes
+        self.opt = None
+        self.sch = None
         
-        # init optimizer and scheduler
-        opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, momentum=0.9)
-        sch = sch_fn(opt, T_0=10, T_mult=1,)
-        # convert optimizer to lightning format
-        sch = {"scheduler": sch, "interval": "step", "frequency":1}
-        return [opt], [sch]
+    def configure_optimizers(self):
+        if self.opt is None:
+            opt_fn = torch.optim.SGD
+            params = [p for p in self.net.parameters() if p.requires_grad]
+            # init optimizer 
+            self.opt = opt_fn(params, lr=self.learning_rate, weight_decay=self.weight_decay, momentum=0.9)
+
+        if self.sch is None:
+            sch_fn = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+            # init scheduler
+            sch = sch_fn(opt, T_0=10, T_mult=1,)
+            # convert optimizer to lightning format
+            self.sch = {"scheduler": sch, "interval": "step", "frequency":1}
+    
+        return [self.opt], [self.sch]
 
     def freeze_classifier(self):
         self.net.freeze_classifier()
@@ -148,6 +164,7 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
 
         self.log('test_loss', loss, on_step=False, on_epoch=True)
         self.log('test_acc', acc, on_step=False, on_epoch=True)
+
 
 
 # -----------------------------------
