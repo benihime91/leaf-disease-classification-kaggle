@@ -120,7 +120,7 @@ class LightningModel_resnext50_32x4d(pl.LightningModule):
         if self.sch is None:
             sch_fn = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
             # init scheduler
-            sch = sch_fn(opt, T_0=10, T_mult=1,)
+            sch = sch_fn(self.opt, T_0=10, T_mult=1,)
             # convert optimizer to lightning format
             self.sch = {"scheduler": sch, "interval": "step", "frequency":1}
     
