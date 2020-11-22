@@ -13,6 +13,7 @@ class PlantDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, idx):
         image_id = self.df.filePath[idx]
+        target = self.df.label[idx]
         
         # Read an image with OpenCV
         img = cv2.imread(image_id)
@@ -23,8 +24,5 @@ class PlantDataset(torch.utils.data.Dataset):
         
         # apply transformations to the image
         img = self.transforms(image=img)["image"]
-        
-        target = self.df.label[idx]
-        target = torch.tensor(target)
-        
+
         return img, target
