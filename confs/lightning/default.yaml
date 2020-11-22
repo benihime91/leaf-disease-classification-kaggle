@@ -1,0 +1,23 @@
+lightning:
+  callbacks:
+    - class_name: pytorch_lightning.callbacks.LearningRateMonitor
+      params:
+        logging_interval: step
+
+    - class_name: pytorch_lightning.callbacks.EarlyStopping
+      params:
+        monitor: ${training.metric}
+        patience: 5
+        mode: min
+
+  model_checkpoint:
+    filepath: ${training.checkpoint_path}
+    monitor: ${training.metric}
+    mode: min
+    save_top_k: 1
+
+  init_args:
+    precision: 16
+    gpu: 1
+    log_every_n_steps: 10
+    max_epochs: ${training.num_epochs}

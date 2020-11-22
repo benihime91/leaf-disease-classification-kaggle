@@ -1,0 +1,8 @@
+defaults:
+  - model: resnext50_32x4d
+  - training: default
+  - lightning: default
+  - optimizer: adamw
+  - scheduler: cosineannealingwarmrestarts
+  - logger: wandb
+  - augmentation: augs

@@ -1,0 +1,8 @@
+model:
+  class_name: torchvision.models.resnext50_32x4d
+  params:
+    pretrained: True
+    progress: True
+  output_dims: 1000
+  fc1: 512
+  fc2: 256

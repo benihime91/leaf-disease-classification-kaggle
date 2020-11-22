@@ -1,0 +1,13 @@
+training:
+  lr: 0.01
+  metric: val_loss
+  seed: 42
+  job_name: default
+  checkpoint_path: /kaggle/working/
+  model_save_dir: /kaggle/working/weights_fold=0.pt
+  num_epochs: 10
+  image_dim: 224
+  dataloaders:
+    batch_size: 128
+    pin_memory: true
+    num_workers: 5
