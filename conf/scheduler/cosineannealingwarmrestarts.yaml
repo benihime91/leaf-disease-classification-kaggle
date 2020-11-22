@@ -3,3 +3,6 @@ scheduler:
   params:
     T_0: 10
     T_mult: 2
+  interval: "step"
+  frequency: 1
+  monitor: null

@@ -6,3 +6,10 @@ defaults:
   - scheduler: cosineannealingwarmrestarts
   - logger: wandb
   - augmentation: augs
+
+image_dir: /kaggle/input/cassava-leaf-disease-classification/train_images
+csv_dir: /kaggle/input/cassava-leaf-disease-classification/train.csv
+json_dir: /kaggle/input/cassava-leaf-disease-classification/label_num_to_disease_map.json
+fold_csv_dir: data/fold_df.csv
+fold_num: 0
+use_weights: true

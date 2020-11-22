@@ -16,9 +16,6 @@ augmentation:
 
     - class_name: albumentations.RandomBrightnessContrast
       params:
-        hue_shift_limit: 0.2
-        sat_shift_limit: 0.2
-        val_shift_limit: 0.2
         p: 0.5
 
     - class_name: albumentations.ShiftScaleRotate

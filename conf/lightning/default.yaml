@@ -21,3 +21,4 @@ lightning:
     gpu: 1
     log_every_n_steps: 10
     max_epochs: ${training.num_epochs}
+    benchmark: true
