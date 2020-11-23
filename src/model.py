@@ -1,4 +1,5 @@
 from typing import Optional
+import logging
 
 import pytorch_lightning as pl
 import torch
@@ -70,15 +71,15 @@ class LitModel(pl.LightningModule):
             base_model = nn.Sequential(
                 nn.BatchNorm1d(output_dims),
                 nn.ReLU(inplace=True),
-                nn.Dropout(0.5),
+                nn.Dropout(0.25),
                 nn.Linear(output_dims, model_config.fc1),
                 nn.BatchNorm1d(model_config.fc1),
                 nn.ReLU(inplace=True),
-                nn.Dropout(0.5),
+                nn.Dropout(0.25),
                 nn.Linear(model_config.fc1, model_config.fc2),
                 nn.BatchNorm1d(model_config.fc2),
                 nn.ReLU(inplace=True),
-                nn.Dropout(0.5),
+                nn.Dropout(0.25),
                 nn.Linear(model_config.fc2, self.num_classes)
             )
 
@@ -93,6 +94,7 @@ class LitModel(pl.LightningModule):
 
         # init loss_fn
         self.loss_fn = nn.CrossEntropyLoss(weight=weights)
+        self.valid_loss_fn = nn.CrossEntropyLoss()
 
         # init metrics
         self.metric_fn = accuracy
@@ -119,6 +121,14 @@ class LitModel(pl.LightningModule):
 
         return [opt], [sch]
 
+    def show_trainable_layers(self):
+        # prints all the trainable layers of the model
+        logger = logging.getLogger("lightning")
+        logger.info("Trainable Modules: ")
+        for index, (name, param) in enumerate(self.net.named_parameters()):
+            if param.requires_grad:
+                logger.info(index, name)
+
     def freeze_classifier(self):
         # freeze the parameters of the feature extractor
         self.net.freeze_classifier()
@@ -143,7 +153,7 @@ class LitModel(pl.LightningModule):
         logits = self(x)
         preds = torch.argmax(logits, dim=1)
 
-        loss = self.loss_fn(logits, y)
+        loss = self.valid_loss_fn(logits, y)
         acc = self.metric_fn(preds, y)
 
         self.log('val_loss', loss, prog_bar=True)

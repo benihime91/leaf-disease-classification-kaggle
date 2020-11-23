@@ -36,7 +36,7 @@ class ImagePredictionLogger(pl.Callback):
         trainer.logger.experiment.log({"examples": examples})
 
 
-def run(config: DictConfig):
+def run(config: DictConfig, print_layers:bool = False):
     """Runs the training"""
     # init logger
     logger = logging.getLogger("lightning")
@@ -132,6 +132,8 @@ def run(config: DictConfig):
     # init model
     model = LitModel(config, weights=weights)
     model.example_input_array = torch.zeros_like(ims)
+    if print_layers:
+        model.show_trainable_layers()
 
     # freeze/unfreeze the feature extractor of the model
     model.unfreeze_classifier()
