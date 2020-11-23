@@ -66,20 +66,27 @@ class LitModel(pl.LightningModule):
         output_dims = config.model.output_dims
 
         # init base model
-        base_model = nn.Sequential(
-            nn.BatchNorm1d(output_dims),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(output_dims, model_config.fc1),
-            nn.BatchNorm1d(model_config.fc1),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(model_config.fc1, model_config.fc2),
-            nn.BatchNorm1d(model_config.fc2),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(model_config.fc2, self.num_classes)
-        )
+        if config.model.use_custom_base:
+            base_model = nn.Sequential(
+                nn.BatchNorm1d(output_dims),
+                nn.ReLU(inplace=True),
+                nn.Dropout(0.5),
+                nn.Linear(output_dims, model_config.fc1),
+                nn.BatchNorm1d(model_config.fc1),
+                nn.ReLU(inplace=True),
+                nn.Dropout(0.5),
+                nn.Linear(model_config.fc1, model_config.fc2),
+                nn.BatchNorm1d(model_config.fc2),
+                nn.ReLU(inplace=True),
+                nn.Dropout(0.5),
+                nn.Linear(model_config.fc2, self.num_classes)
+            )
+
+        else:
+            base_model = nn.Sequential(
+                nn.ReLU(inplace=True),
+                nn.Linear(output_dims, self.num_classes)
+            )
 
         # transfoer learning network
         self.net = BasicTransferLearningModel(classifier, base_model)
