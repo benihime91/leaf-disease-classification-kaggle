@@ -1,5 +1,5 @@
 model:
-  class_name: torchvision.models.resnext50_32x4d
+  class_name: torchvision.models.resnext50
   params:
     pretrained: true
     progress: true
