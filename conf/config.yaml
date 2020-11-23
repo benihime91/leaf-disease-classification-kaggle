@@ -1,22 +1,18 @@
 defaults:
-  - model: resnext50_32x4d
-  - training: default
-  - lightning: default
-  - optimizer: adamw
-  - scheduler: cosineannealingwarmrestarts
-  - logger: wandb
-  - augmentation: augs
-
+  - model: efficientnet_b3a # name of the model config file
+  - training: default # name of the training config file
+  - lightning: default # name of the lightning config file
+  - optimizer: adamw # name of the optimizer config file
+  - scheduler: cosineannealingwarmrestarts # name of the scheduler config file
+  - logger: wandb # name of the logger config file
+  - augmentation: augs # name of the augmentation config file
+fold_num: 0 # which fold to train for ? one of [0, 1, 2, 3, 4]
+run_name: experiment # name of the experiment, this will be the name of the wandb run
+checkpoint_path: /kaggle/working/ # path where to store lightning checkpoints
+model_save_dir: /kaggle/working/weights_stage2_fold=0.pt # path where to save the pytorch model weights
+seed: 42 # random seed for the experiment
+use_weights: true # use weighted nn.CrossEntropyLoss
 image_dir: /kaggle/input/cassava-leaf-disease-classification/train_images
 csv_dir: /kaggle/input/cassava-leaf-disease-classification/train.csv
 json_dir: /kaggle/input/cassava-leaf-disease-classification/label_num_to_disease_map.json
 fold_csv_dir: /kaggle/working/leaf-disease-classification-kaggle/data/fold_df.csv
-
-use_weights: true
-
-fold_num: 0
-run_name: 23Nov-9:00-train-fold=0
-checkpoint_path: /kaggle/working/
-model_save_dir: /kaggle/working/weights_stage2_fold=0.pt
-
-seed: 42
