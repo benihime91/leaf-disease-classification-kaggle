@@ -43,13 +43,14 @@ def run(config: DictConfig):
 
     # init random seed
     set_seed(config.training.seed)
-    logger.info(f"[INFO] seed = {config.training.seed}")
+    # logger.info(f"[INFO] seed = {config.training.seed}")
 
     # login to wandb
     wandb.login(key=config.logger.api)
 
-    print(" ")
-    logger.info("[INFO] Prepraring the datasets ....")
+    # print(" ")
+    # logger.info("[INFO] Prepraring the datasets ....")
+    
     # init preprocessor
     processor = Preprocessor(config.csv_dir, config.json_dir, config.image_dir, num_folds=5)
 
@@ -60,7 +61,8 @@ def run(config: DictConfig):
 
     # generate data for given fold
     fold_num = config.fold_num
-    logger.info(f"[INFO] Initializing data for fold : {fold_num}")
+    
+    # logger.info(f"[INFO] Initializing data for fold : {fold_num}")
 
     # init folds for train/valid/test data
     trainFold, valFold = processor.get_fold(fold_num)
@@ -70,9 +72,9 @@ def run(config: DictConfig):
     testFold.reset_index(drop=True, inplace=True)
     valFold.reset_index(drop=True, inplace=True)
 
-    logger.info(f"[INFO] Number of training examples  : {len(trainFold)}")
-    logger.info(f"[INFO] Number of validation examples: {len(valFold)}")
-    logger.info(f"[INFO] Number of testing examples   : {len(testFold)}")
+    # logger.info(f"[INFO] Number of training examples  : {len(trainFold)}")
+    # logger.info(f"[INFO] Number of validation examples: {len(valFold)}")
+    # logger.info(f"[INFO] Number of testing examples   : {len(testFold)}")
 
     # init weights for loss function
     weights = None
@@ -100,8 +102,9 @@ def run(config: DictConfig):
     ims, _ = samples
 
     # init trainer
-    print(" ")
-    logger.info("[INFO] Initializing pl.Trainer ... ")
+
+    # print(" ")
+    # logger.info("[INFO] Initializing pl.Trainer ... ")
 
     trainer_cfg = config.lightning
     # init lightning callbacks
@@ -122,9 +125,9 @@ def run(config: DictConfig):
     # log the training config to wandb
     wb_logger.log_hyperparams(config)
 
-    print(" ")
-    logger.info("[INFO] Compiling model .... ")
-    print(" ")
+    # print(" ")
+    # logger.info("[INFO] Compiling model .... ")
+    # print(" ")
 
     # init model
     model = LitModel(config, weights=weights)
@@ -151,12 +154,15 @@ def run(config: DictConfig):
     torchmodel = loaded_model.net
 
     # save torch model state dict
-    print(" ")
+    # print(" ")
+    
     torch.save(torchmodel.state_dict(), WEIGHTS_PATH)
-    logger.info(f"[INFO] Model saved to {WEIGHTS_PATH}")
+    
+    # logger.info(f"Model saved to {WEIGHTS_PATH}")
 
-    print(" ")
-    logger.info("[INFO] Cleaning up .... ")
+    # print(" ")
+    # logger.info("[INFO] Cleaning up .... ")
+    
     # save the weights to wandb
     # WandB – Save the model checkpoint.
     # This automatically saves a file to the cloud and associates
