@@ -15,7 +15,7 @@ fold_csv_dir: /kaggle/working/leaf-disease-classification-kaggle/data/fold_df.cs
 use_weights: true
 
 fold_num: 0
-run_name: train-fold=0
+run_name: 23Nov-9:00-train-fold=0
 checkpoint_path: /kaggle/working/
 model_save_dir: /kaggle/working/weights_stage2_fold=0.pt
 
