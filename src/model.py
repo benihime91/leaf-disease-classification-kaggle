@@ -123,11 +123,9 @@ class LitModel(pl.LightningModule):
 
     def show_trainable_layers(self):
         # prints all the trainable layers of the model
-        logger = logging.getLogger("lightning")
-        logger.info("Trainable Modules: ")
         for index, (name, param) in enumerate(self.net.named_parameters()):
             if param.requires_grad:
-                logger.info(index, name)
+                print(index, name)
 
     def freeze_classifier(self):
         # freeze the parameters of the feature extractor
