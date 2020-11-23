@@ -4,8 +4,7 @@ scheduler:
     max_lr: ${training.lr}
     anneal_strategy: cos
     cycle_momentum: true
-    epochs: ${training.num_epochs}
-    steps_per_epoch: ${training.steps_per_epoch}
+    total_steps: ${training.total_steps}
   interval: step
   frequency: 1
   monitor: null

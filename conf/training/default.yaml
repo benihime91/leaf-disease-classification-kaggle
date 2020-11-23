@@ -4,7 +4,7 @@ training:
   checkpoint_path: ${checkpoint_path}
   model_save_dir: ${model_save_dir}
   num_epochs: 30 # totat number of epochs to train for
-  steps_per_epoch: null # this is optional;
+  total_steps: null # this is optional;
   lr: 0.01 # learning_rate
   num_classes: 5 # number of output classes
   image_dim: 224 # heght/width of the image after transformation
