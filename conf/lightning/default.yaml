@@ -24,3 +24,12 @@ lightning:
     benchmark: true
     gradient_clip_val: 0
     max_steps: ${training.total_steps}
+    check_val_every_n_epoch: 1
+    weights_summary: top
+    terminate_on_nan: true
+    tpu_cores: null
+    progress_bar_refresh_rate: 1
+    accumulate_grad_batches: 1
+    num_sanity_val_steps: 2
+    amp_backend: native
+    plugins: null
