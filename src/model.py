@@ -52,10 +52,10 @@ class LitModel(pl.LightningModule):
     def __init__(self, config: DictConfig, weights: Optional[torch.Tensor] = None):
         super().__init__()
         # Set our class attributes
-        self.config = config
+        self.config      = config
         self.num_classes = config.model.num_classes
-        self.opt_config = config.optimizer
-        self.sch_config = config.scheduler
+        self.opt_config  = config.optimizer
+        self.sch_config  = config.scheduler
 
         # model configuration
         model_config = config.model
@@ -79,12 +79,13 @@ class LitModel(pl.LightningModule):
                 nn.Linear(model_config.fc1, model_config.fc2),
                 nn.BatchNorm1d(model_config.fc2),
                 nn.ReLU(inplace=True),
-                nn.Dropout(0.25),
+                nn.Dropout(0.5),
                 nn.Linear(model_config.fc2, self.num_classes)
             )
 
         else:
             base_model = nn.Sequential(
+                nn.Dropout(0.5),
                 nn.ReLU(inplace=True),
                 nn.Linear(output_dims, self.num_classes)
             )

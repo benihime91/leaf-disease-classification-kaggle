@@ -101,6 +101,9 @@ def run(config: DictConfig, print_layers:bool = False):
     samples = next(iter(dm.val_dataloader()))
     ims, _ = samples
 
+    # set training total steps
+    config.training.total_steps = len(dm.train_dataloader()) * config.training.num_epochs
+
     # init trainer
 
     # print(" ")
@@ -142,7 +145,7 @@ def run(config: DictConfig, print_layers:bool = False):
     wb_logger.watch(model.net)
 
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
-    trainer.fit(model, dm)
+    trainer.fit(model, datamodule=dm)
     
     # Compute metrics on test dataset
     _ = trainer.test(model, datamodule=dm, ckpt_path=chkpt.best_model_path)
