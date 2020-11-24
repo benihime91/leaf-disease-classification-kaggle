@@ -38,6 +38,9 @@ class ImagePredictionLogger(pl.Callback):
 
 def run(config: DictConfig, print_layers:bool = False):
     """Runs the training"""
+    
+    # -------------------- set up seed, wandb, logger --------------- #
+    
     # init logger
     logger = logging.getLogger("lightning")
 
@@ -48,9 +51,8 @@ def run(config: DictConfig, print_layers:bool = False):
     # login to wandb
     wandb.login(key=config.logger.api)
 
-    # print(" ")
-    # logger.info("[INFO] Prepraring the datasets ....")
-    
+    # ---------------------- data preprocessing ---------------------- #
+
     # init preprocessor
     processor = Preprocessor(config.csv_dir, config.json_dir, config.image_dir, num_folds=5)
 
@@ -61,8 +63,6 @@ def run(config: DictConfig, print_layers:bool = False):
 
     # generate data for given fold
     fold_num = config.fold_num
-    
-    # logger.info(f"[INFO] Initializing data for fold : {fold_num}")
 
     # init folds for train/valid/test data
     trainFold, valFold = processor.get_fold(fold_num)
@@ -72,10 +72,6 @@ def run(config: DictConfig, print_layers:bool = False):
     testFold.reset_index(drop=True, inplace=True)
     valFold.reset_index(drop=True, inplace=True)
 
-    # logger.info(f"[INFO] Number of training examples  : {len(trainFold)}")
-    # logger.info(f"[INFO] Number of validation examples: {len(valFold)}")
-    # logger.info(f"[INFO] Number of testing examples   : {len(testFold)}")
-
     # init weights for loss function
     weights = None
     if config.use_weights:
@@ -83,6 +79,8 @@ def run(config: DictConfig, print_layers:bool = False):
         weights = torch.tensor(list(weights.values()))
         weights = 1 - weights
         weights = weights.div(sum(weights))
+
+    # ---------------------- init lightning datamodule ---------------------- #
 
     # init albumentation transformations
     tfms_config = config.augmentation
@@ -104,11 +102,8 @@ def run(config: DictConfig, print_layers:bool = False):
     # set training total steps
     config.training.total_steps = len(dm.train_dataloader()) * config.training.num_epochs
 
-    # init trainer
-
-    # print(" ")
-    # logger.info("[INFO] Initializing pl.Trainer ... ")
-
+    # ---------------------- init lightning trainer ---------------------- #
+    
     trainer_cfg = config.lightning
     # init lightning callbacks
     chkpt = pl.callbacks.ModelCheckpoint(**trainer_cfg.model_checkpoint)
@@ -118,6 +113,8 @@ def run(config: DictConfig, print_layers:bool = False):
     # append magePredictionLogger callback to the callback list
     cbs.append(ImagePredictionLogger(samples))
 
+    del samples
+
     # init wandb logger
     wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
 
@@ -126,15 +123,27 @@ def run(config: DictConfig, print_layers:bool = False):
     trainer = pl.Trainer(callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args)
 
     # log the training config to wandb
-    wb_logger.log_hyperparams(config)
+    # create a new hparam dictionary with the relevant hparams and 
+    # log the hparams to wandb
+    wb_hparam = {
+        "training_fold": config.fold_num,
+        "input_dims": config.training.image_dim,
+        "batch_size": config.training.dataloaders.batch_size,
+        "optimizer": config.optimizer.class_name,
+        "scheduler": config.cheduler.class_name,
+        "learning_rate": config.optimizer.params.lr,
+        "weight_decay": config.optimizer.params.weight_decay,
+        "num_epochs": config.training.num_epochs,
+        "use_loss_fn_weights": config.use_weights,
+        "use_custom_base": config.model.use_custom_base,
+    }
+    wb_logger.log_hyperparams(wb_hparam)
 
-    # print(" ")
-    # logger.info("[INFO] Compiling model .... ")
-    # print(" ")
+    # ----------------- init lightning-model ------------------------------ #
 
-    # init model
     model = LitModel(config, weights=weights)
     model.example_input_array = torch.zeros_like(ims)
+    
     if print_layers:
         model.show_trainable_layers()
 
@@ -143,6 +152,8 @@ def run(config: DictConfig, print_layers:bool = False):
 
     # log model topology to wandb
     wb_logger.watch(model.net)
+
+    # ------------------------------ start ---------------------------------- #
 
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, datamodule=dm)
@@ -157,21 +168,12 @@ def run(config: DictConfig, print_layers:bool = False):
     params = {"config": config, "weights": weights}
     loaded_model = model.load_from_checkpoint(PATH, **params)
     torchmodel = loaded_model.net
-
-    # save torch model state dict
-    # print(" ")
     
     torch.save(torchmodel.state_dict(), WEIGHTS_PATH)
     
-    # logger.info(f"Model saved to {WEIGHTS_PATH}")
-
-    # print(" ")
-    # logger.info("[INFO] Cleaning up .... ")
+    del torchmodel
+    del loaded_model
     
-    # save the weights to wandb
-    # WandB – Save the model checkpoint.
-    # This automatically saves a file to the cloud and associates
-    # it with the current run.
     wandb.save(WEIGHTS_PATH)
-    # finish run
     wandb.finish()
+    # ------------------------------ end ---------------------------------- #
