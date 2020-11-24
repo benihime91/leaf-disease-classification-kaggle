@@ -130,7 +130,7 @@ def run(config: DictConfig, print_layers:bool = False):
         "input_dims": config.training.image_dim,
         "batch_size": config.training.dataloaders.batch_size,
         "optimizer": config.optimizer.class_name,
-        "scheduler": config.cheduler.class_name,
+        "scheduler": config.scheduler.class_name,
         "learning_rate": config.optimizer.params.lr,
         "weight_decay": config.optimizer.params.weight_decay,
         "num_epochs": config.training.num_epochs,
