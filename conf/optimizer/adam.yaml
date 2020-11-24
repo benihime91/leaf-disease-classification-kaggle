@@ -2,3 +2,4 @@ optimizer:
   class_name: torch.optim.Adam
   params:
     lr: ${training.lr}
+    weight_decay: 0.0
