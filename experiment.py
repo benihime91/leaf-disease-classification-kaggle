@@ -179,6 +179,7 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     WEIGHTS_PATH = config.training.model_save_dir
 
     # init best model
+    logger.info(f"Restoring best model weights from {PATH}")
     params       = {"config": config, "weights": weights}
     loaded_model = model.load_from_checkpoint(PATH, **params)
     torchmodel   = loaded_model.net
