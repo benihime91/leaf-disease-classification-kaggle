@@ -198,7 +198,7 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     OmegaConf.save(config, f=conf_pth)
     wandb.save(conf_pth)
 
-    shutil.rmtree(conf_pth)
+    os.unlink(conf_pth)
 
     if not config.save_pytorch_model:
         shutil.rmtree(WEIGHTS_PATH)
