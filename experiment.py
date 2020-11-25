@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import shutil
 
 import albumentations as A
 import pandas as pd
@@ -42,11 +43,11 @@ def run(config: DictConfig, print_layers:bool = False):
     # -------------------- set up seed, wandb, logger --------------- #
     
     # init logger
-    logger = logging.getLogger("lightning")
+    logger = logging.getLogger(__name__)
 
     # init random seed
     set_seed(config.training.seed)
-    # logger.info(f"[INFO] seed = {config.training.seed}")
+    logger.info(f"using seed {config.training.seed}")
 
     # login to wandb
     wandb.login(key=config.logger.api)
@@ -94,6 +95,8 @@ def run(config: DictConfig, print_layers:bool = False):
     dl_config = config.training.dataloaders
     dm = LitDatatModule(trainFold, valFold, testFold, tfms, dl_config)
     dm.setup()
+
+    logger.info(f"init dataloaders with {config.training.image_dim} image dim and batch_size of {config.training.dataloaders.batch_size}")
 
     # grab samples to log predictions on
     samples = next(iter(dm.val_dataloader()))
@@ -153,6 +156,16 @@ def run(config: DictConfig, print_layers:bool = False):
     # log model topology to wandb
     wb_logger.watch(model.net)
 
+    model_name = config.model.params.model_name or config.model.class_name
+    
+    if not config.model.use_custom_base:
+        logging.info(f"init model from {model_name} without custom base")
+    else:
+        logging.info(f"init model from {model_name} with custom base")
+
+    logging.info(f"init {config.optimizer.class_name} optimizer")
+    logging.info(f"init {config.scheduler.class_name} scheduler")
+
     # ------------------------------ start ---------------------------------- #
 
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
@@ -165,15 +178,23 @@ def run(config: DictConfig, print_layers:bool = False):
     WEIGHTS_PATH = config.training.model_save_dir
 
     # init best model
-    params = {"config": config, "weights": weights}
+    params       = {"config": config, "weights": weights}
     loaded_model = model.load_from_checkpoint(PATH, **params)
-    torchmodel = loaded_model.net
+    torchmodel   = loaded_model.net
     
     torch.save(torchmodel.state_dict(), WEIGHTS_PATH)
+
     
     del torchmodel
     del loaded_model
     
     wandb.save(WEIGHTS_PATH)
+
+    if not config.save_pytorch_model:
+        shutil.rmtree(WEIGHTS_PATH)
+
+    if config.save_pytorch_model:
+        logging.info(f"Torch model weights saved to {WEIGHTS_PATH}")
+    
     wandb.finish()
     # ------------------------------ end ---------------------------------- #
