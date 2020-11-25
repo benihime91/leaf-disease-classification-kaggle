@@ -195,7 +195,7 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     wandb.save(WEIGHTS_PATH)
     # upload the full config file to wandb
     conf_pth = "full_config.yaml"
-    OmegaConf.save(conf=config, f=conf_pth)
+    OmegaConf.save(config, f=conf_pth)
     wandb.save(conf_pth)
 
     shutil.rmtree(conf_pth)
