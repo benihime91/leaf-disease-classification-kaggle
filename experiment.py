@@ -193,6 +193,7 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     
     # upload the weights file to wandb
     wandb.save(WEIGHTS_PATH)
+    
     # upload the full config file to wandb
     conf_pth = "full_config.yaml"
     OmegaConf.save(config, f=conf_pth)
@@ -201,7 +202,7 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     os.unlink(conf_pth)
 
     if not config.save_pytorch_model:
-        shutil.rmtree(WEIGHTS_PATH)
+        os.unlink(WEIGHTS_PATH)
 
     if config.save_pytorch_model:
         logger.info(f"Torch model weights saved to {WEIGHTS_PATH}")
