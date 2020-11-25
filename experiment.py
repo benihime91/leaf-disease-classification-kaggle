@@ -169,6 +169,7 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
 
     # ------------------------------ start ---------------------------------- #
 
+    logger.info(f"training over {config.training.num_epochs} epochs ~ {config.training.total_steps} steps")
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, datamodule=dm)
     
