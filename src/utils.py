@@ -61,7 +61,7 @@ class ImagePredictionLogger(pl.Callback):
 class PrintCallback(pl.Callback):
     def __init__(self, log):
         self.metrics = []
-        self.template = "EPOCH {}: train_loss: {} val_loss: {} val_acc: {}"
+        self.template = "Epoch {} - train loss: {:.3f}  val loss: {:.3f}  accuracy: {:.3f}%"
         self.log = log
 
     def on_epoch_end(self, trainer, pl_module):
