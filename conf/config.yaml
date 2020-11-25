@@ -19,5 +19,4 @@ image_dir: /kaggle/input/cassava-leaf-disease-classification/train_images
 csv_dir: /kaggle/input/cassava-leaf-disease-classification/train.csv
 json_dir: /kaggle/input/cassava-leaf-disease-classification/label_num_to_disease_map.json
 fold_csv_dir: /kaggle/working/leaf-disease-classification-kaggle/data/fold_df.csv
-save_pytorch_model: true
 run: experiment # name of the python script to run for training without the .py extension

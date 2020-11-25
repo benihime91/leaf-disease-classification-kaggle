@@ -37,7 +37,9 @@ class Preprocessor:
 
         """
 
-    def __init__(self, csv_path: str, json_path: str, image_dir: str, num_folds: int = 5):
+    def __init__(
+        self, csv_path: str, json_path: str, image_dir: str, num_folds: int = 5
+    ):
         """
         Args : 
             1. csv_path : path to the train_csv file
@@ -50,7 +52,8 @@ class Preprocessor:
         dataframe = pd.read_csv(csv_path)
         # modify filepath corresponding to each image_id of the dataframe
         dataframe["filePath"] = [
-            os.path.join(image_dir, dataframe.image_id[i]) for i in range(len(dataframe))
+            os.path.join(image_dir, dataframe.image_id[i])
+            for i in range(len(dataframe))
         ]
         # creat a dummy column for the kfold
         dataframe["kfold"] = -1
@@ -96,7 +99,7 @@ class Preprocessor:
         _targets = _df.label.values
         # create cross-validation folds
         for _fold, (train_idx, val_idx) in enumerate(self.skf.split(_df, _targets)):
-            _df.loc[val_idx, 'kfold'] = _fold
+            _df.loc[val_idx, "kfold"] = _fold
 
         # replace the original dataframe
         self.dataframe = _df

@@ -65,12 +65,12 @@ class LitDatatModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
-        if stage == 'fit' or stage is None:
+        if stage == "fit" or stage is None:
             self.train = PlantDataset(self.df_train, self.transforms["train"])
             self.valid = PlantDataset(self.df_valid, self.transforms["valid"])
 
         # Assign test dataset for use in dataloader(s)
-        if stage == 'test' or stage is None:
+        if stage == "test" or stage is None:
             self.test = PlantDataset(self.df_test, self.transforms["test"])
 
     def train_dataloader(self):

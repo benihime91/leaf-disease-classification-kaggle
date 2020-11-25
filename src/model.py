@@ -52,10 +52,10 @@ class LitModel(pl.LightningModule):
     def __init__(self, config: DictConfig, weights: Optional[torch.Tensor] = None):
         super().__init__()
         # Set our class attributes
-        self.config      = config
+        self.config = config
         self.num_classes = config.model.num_classes
-        self.opt_config  = config.optimizer
-        self.sch_config  = config.scheduler
+        self.opt_config = config.optimizer
+        self.sch_config = config.scheduler
 
         # model configuration
         model_config = config.model
@@ -80,14 +80,14 @@ class LitModel(pl.LightningModule):
                 nn.BatchNorm1d(model_config.fc2),
                 nn.ReLU(inplace=True),
                 nn.Dropout(0.5),
-                nn.Linear(model_config.fc2, self.num_classes)
+                nn.Linear(model_config.fc2, self.num_classes),
             )
 
         else:
             base_model = nn.Sequential(
                 nn.Dropout(0.5),
                 nn.ReLU(inplace=True),
-                nn.Linear(output_dims, self.num_classes)
+                nn.Linear(output_dims, self.num_classes),
             )
 
         # transfoer learning network
@@ -105,12 +105,10 @@ class LitModel(pl.LightningModule):
         ps = [p for p in self.net.parameters() if p.requires_grad]
 
         # init optimizer
-        opt = load_obj(self.opt_config.class_name)(
-            ps, **self.opt_config.params)
+        opt = load_obj(self.opt_config.class_name)(ps, **self.opt_config.params)
 
         # init scheduler
-        sch = load_obj(self.sch_config.class_name)(
-            opt, **self.sch_config.params)
+        sch = load_obj(self.sch_config.class_name)(opt, **self.sch_config.params)
 
         # convert scheduler to lightning format
         sch = {
@@ -144,7 +142,7 @@ class LitModel(pl.LightningModule):
         x, y = batch
         logits = self(x)
         loss = self.loss_fn(logits, y)
-        self.log('train_loss', loss, prog_bar=False)
+        self.log("train_loss", loss, prog_bar=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -155,8 +153,8 @@ class LitModel(pl.LightningModule):
         loss = self.valid_loss_fn(logits, y)
         acc = self.metric_fn(preds, y)
 
-        self.log('val_loss', loss, prog_bar=True)
-        self.log('val_acc', acc, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", acc, prog_bar=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -167,5 +165,5 @@ class LitModel(pl.LightningModule):
         loss = self.loss_fn(logits, y)
         acc = self.metric_fn(preds, y)
 
-        self.log('test_loss', loss, on_step=False, on_epoch=True)
-        self.log('test_acc', acc, on_step=False, on_epoch=True)
+        self.log("test_loss", loss, on_step=False, on_epoch=True)
+        self.log("test_acc", acc, on_step=False, on_epoch=True)
