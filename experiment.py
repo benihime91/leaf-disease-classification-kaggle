@@ -160,12 +160,12 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     model_name = config.model.params.model_name or config.model.class_name
     
     if not config.model.use_custom_base:
-        logging.info(f"init model from {model_name} without custom base")
+        logger.info(f"init model from {model_name} without custom base")
     else:
-        logging.info(f"init model from {model_name} with custom base")
+        logger.info(f"init model from {model_name} with custom base")
 
-    logging.info(f"init {config.optimizer.class_name} optimizer")
-    logging.info(f"init {config.scheduler.class_name} scheduler")
+    logger.info(f"init {config.optimizer.class_name} optimizer")
+    logger.info(f"init {config.scheduler.class_name} scheduler")
 
     # ------------------------------ start ---------------------------------- #
 
@@ -189,13 +189,20 @@ def run(config: DictConfig, logger=None, print_layers:bool = False):
     del torchmodel
     del loaded_model
     
+    # upload the weights file to wandb
     wandb.save(WEIGHTS_PATH)
+    # upload the full config file to wandb
+    conf_pth = "full_config.yaml"
+    OmegaConf.save(conf=config, f=conf_pth)
+    wandb.save(conf_pth)
+
+    shutil.rmtree(conf_pth)
 
     if not config.save_pytorch_model:
         shutil.rmtree(WEIGHTS_PATH)
 
     if config.save_pytorch_model:
-        logging.info(f"Torch model weights saved to {WEIGHTS_PATH}")
+        logger.info(f"Torch model weights saved to {WEIGHTS_PATH}")
     
     wandb.finish()
     # ------------------------------ end ---------------------------------- #

@@ -16,13 +16,21 @@ log = logging.getLogger(__name__)
 
 @hydra.main(config_path='conf', config_name='config')
 def run_model(cfg: DictConfig) -> None:
-    
-    print(cfg.pretty())
-    run_fn = cfg.run
-
+    # extract the function to run from the config
+    log.info(f"train using {cfg.run}.py")
+    run_fn = __all__[cfg.run]
+    # run training job
     run_fn(cfg, logger=log)
 
 
 
 if __name__ == '__main__':
+    """
+    Main script to run a training job from the terminal.
+    Update/modify the config files in conf and run this script
+    to start a training job.
+
+    Usage :
+        ! python hydra_run.py --config_path conf --config_name config
+    """
     run_model()
