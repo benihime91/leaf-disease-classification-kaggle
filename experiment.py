@@ -37,13 +37,14 @@ class ImagePredictionLogger(pl.Callback):
         trainer.logger.experiment.log({"examples": examples})
 
 
-def run(config: DictConfig, print_layers:bool = False):
+def run(config: DictConfig, logger=None, print_layers:bool = False):
     """Runs the training"""
     
     # -------------------- set up seed, wandb, logger --------------- #
     
     # init logger
-    logger = logging.getLogger(__name__)
+    if logger is None:
+        logger = logging.getLogger(__name__)
 
     # init random seed
     set_seed(config.training.seed)
