@@ -6,3 +6,5 @@ Main Frameworks Used:
 - [albumentations](https://github.com/albumentations-team/albumentations)
 - [hydra](https://github.com/facebookresearch/hydra)
 - [pytorch-image-model](https://github.com/rwightman/pytorch-image-models)
+- [cutmix](https://github.com/ildoonet/cutmix)
+- [fmix](https://github.com/ecs-vlc/FMix)
