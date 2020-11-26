@@ -160,7 +160,7 @@ class LitModel(pl.LightningModule):
         logits = self(x)
         preds = torch.argmax(logits, dim=1)
 
-        loss = self.loss_fn(logits, y)
+        loss = self.valid_loss_fn(logits, y)
         acc = self.metric_fn(preds, y)
 
         self.log("test_loss", loss, on_step=False, on_epoch=True)
