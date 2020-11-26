@@ -25,7 +25,7 @@ run: experiment # name of the python script to run for training without the .py 
 cutmix:
   num_class: ${training.num_classes}
   beta: 1.0 # cutmix active when beta > 1
-  num_mix: 5 # number of images to cutmix
+  num_mix: 1 # number of images to cutmix with in a batch
   prob: 0.7 # probability of applying cutmix over a batch
 
 # this is active only if run is set to mixup
