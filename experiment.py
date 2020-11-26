@@ -1,7 +1,5 @@
-import argparse
 import logging
 import os
-import shutil
 
 import albumentations as A
 import pandas as pd
