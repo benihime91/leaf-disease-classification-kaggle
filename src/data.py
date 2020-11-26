@@ -82,7 +82,7 @@ class CutMixDatasetWrapper(Dataset):
         return len(self.dataset)
 
 
-class LitDatatModule(pl.LightningDataModule):
+class LitDataModule(pl.LightningDataModule):
     """
     LightningDataModule wrapper for Image classification dataset.
 

@@ -9,7 +9,7 @@ import wandb
 from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
 
-from src.data import LitDatatModule
+from src.data import LitDataModule
 from src.model import LitModel
 from src.preprocess import Preprocessor
 from src.utils import PrintCallback, load_obj, set_seed
@@ -88,7 +88,7 @@ def run(config: DictConfig, logger=None):
 
     # init datamodule
     dl_config = config.training.dataloaders
-    dm = LitDatatModule(trainFold, valFold, testFold, tfms, dl_config)
+    dm = LitDataModule(trainFold, valFold, testFold, tfms, dl_config)
     dm.setup()
 
     logger.info(

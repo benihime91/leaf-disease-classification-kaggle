@@ -1,18 +1,15 @@
-import hydra
-from omegaconf import DictConfig
-import os
-import warnings
 import logging
 
-warnings.filterwarnings("ignore")
+import hydra
+from omegaconf import DictConfig
 
-from experiment import run
 from cutmix import run as cut_mix_run
-from fmix import run as fmix_run
+from experiment import run
+from mixup import run as mix_run
 
 __all__ = {
     "experiment": run,
-    "fmix": fmix_run,
+    "mixup": mix_run,
     "cutmix": cut_mix_run,
 }
 
