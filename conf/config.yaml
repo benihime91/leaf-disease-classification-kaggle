@@ -9,6 +9,16 @@ defaults:
   - hydra/hydra_logging: colorlog
   - hydra/job_logging: colorlog
 
+# this is active only if run is set to cutmix
+cutmix:
+  beta: 1.0
+  num_mix: 0.5
+  prob: 0.5
+
+  # this is active only if run is set to mixup
+mixup:
+  params: null
+
 fold_num: 0 # which fold to train for ? one of [0, 1, 2, 3, 4]
 run_name: experiment # name of the experiment, this will be the name of the wandb run
 checkpoint_path: /kaggle/working/ # path where to store lightning checkpoints

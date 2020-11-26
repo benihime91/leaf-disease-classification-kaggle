@@ -20,7 +20,7 @@ def run(config: DictConfig, logger=None):
     num_clas = config.training.num_classes
     # modify the datamodule
     def train_dataloader(self):
-        ds = CutMixDatasetWrapper(self.train, num_clas, num_mix=1, beta=1, prob=0.7,)
+        ds = CutMixDatasetWrapper(self.train, num_clas, **config.cutmix)
         return DataLoader(ds, shuffle=True, **self.config)
 
     LitDataModule.train_dataloader = train_dataloader
