@@ -17,6 +17,7 @@ from src.utils import PrintCallback, load_obj, set_seed, SoftTargetCrossEntropy
 
 
 def run(config: DictConfig, logger=None):
+    # ----------- setup experiment ------------------- #
     # modify the datamodule
     def train_dataloader(self):
         ds = CutMixDatasetWrapper(self.train, **config.cutmix)
@@ -25,11 +26,16 @@ def run(config: DictConfig, logger=None):
     LitDataModule.train_dataloader = train_dataloader
 
     # setup logging
-    if logger is None:    logger = logging.getLogger(__name__)
+    if logger is None:
+        logger = logging.getLogger(__name__)
 
     set_seed(config.training.seed)
     logger.info(f"using seed {config.training.seed}")
     wandb.login(key=config.logger.api)
+
+    # ----------- prepare datasets ------------------- #
+
+    logger.info("Prepare Training/Validation/Test Datasets.")
 
     processor = Preprocessor(config.csv_dir, config.json_dir, config.image_dir, 5)
     df = pd.read_csv(config.fold_csv_dir)
@@ -67,17 +73,23 @@ def run(config: DictConfig, logger=None):
         p=1.0,
     )
 
-    tfms = {"train": trn_augs, "valid": valid_augs, "test": test_augs,}
+    tfms = {
+        "train": trn_augs,
+        "valid": valid_augs,
+        "test": test_augs,
+    }
 
     # init datamodule
     dl_config = config.training.dataloaders
     dm = LitDataModule(trainFold, valFold, testFold, tfms, dl_config)
     dm.setup()
 
-    logger.info(f"init dataloaders of {config.training.image_dim} image dim & batch_size of {dl_config.batch_size}")
-
     # set training total steps
-    config.training.total_steps = (len(dm.train_dataloader()) * config.training.num_epochs)
+    config.training.total_steps = (
+        len(dm.train_dataloader()) * config.training.num_epochs
+    )
+
+    # ----------- load lightning trainer ------------------- #
 
     trainer_cfg = config.lightning
     # init lightning callbacks
@@ -92,7 +104,11 @@ def run(config: DictConfig, logger=None):
 
     # init trainer
     _args = trainer_cfg.init_args
-    trainer = pl.Trainer(callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args)
+    trainer = pl.Trainer(
+        callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args
+    )
+
+    # ----------- init lightning module ------------------- #
 
     # log the training config to wandb
     # create a new hparam dictionary with the relevant hparams and
@@ -121,21 +137,35 @@ def run(config: DictConfig, logger=None):
     model_name = config.model.params.model_name or config.model.class_name
 
     if not config.model.use_custom_base:
-        logger.info(f"init {model_name} without custom base")
+        logger.info(f"init from base net : {model_name}, without custom classifier.")
     else:
-        logger.info(f"init {model_name} with custom base")
+        logger.info(f"init from base net: {model_name}, with custom classifier.")
 
-    logger.info(f"using {config.optimizer.class_name} optimizer")
-    logger.info(f"using {config.scheduler.class_name} scheduler")
+    logger.info(f"Using {config.optimizer.class_name} optimizer.")
+    logger.info(
+        f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}"
+    )
+
+    logger.info(f"Using {config.scheduler.class_name} scheduler")
+
+    logger.info(f"Train dataset size: ", len(dm.train_dataloader()))
+    logger.info(f"OOF Validation dataset size:", len(dm.val_dataloader()))
+    logger.info(f"OOF Test dataset size:", len(dm.test_dataloader()))
 
     tr_config = config.training
-    logger.info(f"training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps")
+    logger.info(
+        f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps"
+    )
+
+    # ----------- start train/validaiton/test ------------------- #
 
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, datamodule=dm)
 
     # Compute metrics on test dataset
     _ = trainer.test(model, datamodule=dm, ckpt_path=chkpt.best_model_path)
+
+    # ----------- finish experiment/cleanup/save weights ------------------- #
 
     PATH = chkpt.best_model_path  # path to the best performing model
     WEIGHTS_PATH = config.training.model_save_dir

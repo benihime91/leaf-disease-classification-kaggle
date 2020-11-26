@@ -32,6 +32,8 @@ def run(config: DictConfig, logger=None):
 
     # ---------------------- data preprocessing ---------------------- #
 
+    logger.info("Prepare Training/Validation/Test Datasets.")
+
     # init preprocessor
     processor = Preprocessor(
         config.csv_dir, config.json_dir, config.image_dir, num_folds=5
@@ -91,10 +93,6 @@ def run(config: DictConfig, logger=None):
     dm = LitDataModule(trainFold, valFold, testFold, tfms, dl_config)
     dm.setup()
 
-    logger.info(
-        f"init dataloaders of {config.training.image_dim} image dim & batch_size of {dl_config.batch_size}"
-    )
-
     # set training total steps
     config.training.total_steps = (
         len(dm.train_dataloader()) * config.training.num_epochs
@@ -149,18 +147,26 @@ def run(config: DictConfig, logger=None):
     model_name = config.model.params.model_name or config.model.class_name
 
     if not config.model.use_custom_base:
-        logger.info(f"init {model_name} without custom base")
+        logger.info(f"init from base net {model_name} without custom classifier.")
     else:
-        logger.info(f"init {model_name} with custom base")
+        logger.info(f"init from base net {model_name} with custom classifier.")
 
-    logger.info(f"using {config.optimizer.class_name} optimizer")
-    logger.info(f"using {config.scheduler.class_name} scheduler")
+    logger.info(f"Using {config.optimizer.class_name} optimizer.")
+    logger.info(
+        f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}"
+    )
+
+    logger.info(f"Using {config.scheduler.class_name} scheduler")
+
+    logger.info(f"Train dataset size: ", len(dm.train_dataloader()))
+    logger.info(f"OOF Validation dataset size:", len(dm.val_dataloader()))
+    logger.info(f"OOF Test dataset size:", len(dm.test_dataloader()))
 
     # ------------------------------ start ---------------------------------- #
 
     tr_config = config.training
     logger.info(
-        f"training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps"
+        f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps"
     )
 
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
