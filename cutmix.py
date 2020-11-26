@@ -109,9 +109,11 @@ def run(config: DictConfig, logger=None):
     dm.setup()
 
     # set training total steps
-    config.training.total_steps = (
-        len(dm.train_dataloader()) * config.training.num_epochs
-    )
+    config.training.total_steps = (len(dm.train_dataloader()) * config.training.num_epochs)
+
+    logger.info(f"Train dataset size: {len(dm.train_dataloader())}")
+    logger.info(f"OOF Validation dataset size: {len(dm.val_dataloader())}")
+    logger.info(f"OOF Test dataset size: {len(dm.test_dataloader())}")
 
     # ----------- load lightning trainer ------------------- #
 
@@ -125,11 +127,11 @@ def run(config: DictConfig, logger=None):
 
     # init trainer
     _args = trainer_cfg.init_args
-    trainer = pl.Trainer(
-        callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args
-    )
+    trainer = pl.Trainer(callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args)
 
     # ----------- init lightning module ------------------- #
+    logger.info("Build network.")
+    
     model = LitModel(config, weights=weights)
     # update model loss function to soft cross entropy loss
     model.loss_fn = SoftTargetCrossEntropy(weight=weights)
@@ -140,25 +142,15 @@ def run(config: DictConfig, logger=None):
     model_name = config.model.params.model_name or config.model.class_name
 
     if not config.model.use_custom_base:
-        logger.info(f"Init from base net : {model_name}, without custom classifier.")
+        logger.info(f"Init from base net: {model_name}, without custom classifier.")
     else:
         logger.info(f"Init from base net: {model_name}, with custom classifier.")
 
-    logger.info(f"Using {config.optimizer.class_name} optimizer.")
-    logger.info(
-        f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}"
-    )
-
-    logger.info(f"Using {config.scheduler.class_name} scheduler")
-
-    logger.info(f"Train dataset size: {len(dm.train_dataloader())} .")
-    logger.info(f"OOF Validation dataset size: {len(dm.val_dataloader())} .")
-    logger.info(f"OOF Test dataset size: {len(dm.test_dataloader())} .")
-
+    logger.info(f"Uses {str(config.optimizer.class_name).split('.')[-1]} optimizer.")
+    logger.info(f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}")
+    logger.info(f"Uses {str(config.scheduler.class_name).split('.')[-1]} scheduler.")
     tr_config = config.training
-    logger.info(
-        f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps"
-    )
+    logger.info(f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps.")
 
     # ----------- start train/validaiton/test ------------------- #
 
@@ -174,7 +166,7 @@ def run(config: DictConfig, logger=None):
     WEIGHTS_PATH = config.training.model_save_dir
 
     # init best model
-    logger.info(f"Restoring best model weights from {PATH}")
+    logger.info(f"Restored best model weights from {PATH}.")
     params = {"config": config, "weights": weights}
 
     loaded_model = model.load_from_checkpoint(PATH, **params)
@@ -189,11 +181,12 @@ def run(config: DictConfig, logger=None):
     wandb.save(WEIGHTS_PATH)
 
     # upload the full config file to wandb
-    conf_pth = "full_config.yaml"
+    conf_pth = f"{config.run_name}.yaml"
     OmegaConf.save(config, f=conf_pth)
+    logger.info(f"Saved config file {conf_pth}.")
 
     wandb.save(conf_pth)
 
-    logger.info(f"Torch model weights saved to {WEIGHTS_PATH}")
+    logger.info(f"Saved model {WEIGHTS_PATH}.")
 
     wandb.finish()
