@@ -1,27 +1,10 @@
 augmentation:
-  
   train_augs:
-    - class_name: albumentations.CenterCrop
-      params:
-        height: 512
-        width: 512
-        p: 0.5
-
-    - class_name: albumentations.RandomCrop
-      params:
-        height: 512
-        width: 512
-        p: 0.5
-    
-    - class_name: albumentations.Resize
+    - class_name: albumentations.RandomResizedCrop
       params:
         height: ${training.image_dim}
         width: ${training.image_dim}
         p: 1.0
-
-    - class_name: albumentations.Transpose
-      params:
-        p: 0.5
 
     - class_name: albumentations.HorizontalFlip
       params:
@@ -40,10 +23,6 @@ augmentation:
         max_pixel_value: 255.0
         p: 1.0
 
-    - class_name: albumentations.CoarseDropout
-      params:
-        p: 0.5
-
     - class_name: albumentations.Cutout
       params:
         p: 0.5
@@ -51,8 +30,6 @@ augmentation:
     - class_name: albumentations.pytorch.transforms.ToTensorV2
       params:
         p: 1.0
-
-  
 
   valid_augs:
     - class_name: albumentations.Resize
@@ -69,9 +46,6 @@ augmentation:
     - class_name: albumentations.pytorch.transforms.ToTensorV2
       params:
         p: 1.0
-
-  
-
 
   test_augs:
     - class_name: albumentations.Resize

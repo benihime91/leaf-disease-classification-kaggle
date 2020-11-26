@@ -3,7 +3,7 @@ scheduler:
   params:
     mode: min
     factor: 0.1
-    patience: 3
+    patience: 2
   interval: epoch
   monitor: ${training.metric}
   frequency: 1
