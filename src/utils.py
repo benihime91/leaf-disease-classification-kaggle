@@ -5,7 +5,10 @@ from typing import *
 import numpy as np
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
 import wandb
+from torch import nn
+from torch.nn.modules.loss import _WeightedLoss
 
 
 def load_obj(obj_path: str, default_obj_path: str = "") -> Any:
@@ -61,7 +64,9 @@ class ImagePredictionLogger(pl.Callback):
 class PrintCallback(pl.Callback):
     def __init__(self, log):
         self.metrics = []
-        self.template = "Epoch {} - train loss: {:.3f}  val loss: {:.3f}  accuracy: {:.3f}"
+        self.template = (
+            "Epoch {} - train loss: {:.3f}  val loss: {:.3f}  accuracy: {:.3f}"
+        )
         self.log = log
 
     def on_epoch_end(self, trainer, pl_module):
@@ -72,3 +77,56 @@ class PrintCallback(pl.Callback):
         self.log.info(
             self.template.format(pl_module.current_epoch, train_loss, val_loss, val_acc)
         )
+
+
+def rand_bbox(size, lam):
+    if len(size) == 4:
+        W = size[2]
+        H = size[3]
+    elif len(size) == 3:
+        W = size[1]
+        H = size[2]
+    else:
+        raise Exception
+
+    cut_rat = np.sqrt(1.0 - lam)
+    cut_w = np.int(W * cut_rat)
+    cut_h = np.int(H * cut_rat)
+
+    # uniform
+    cx = np.random.randint(W)
+    cy = np.random.randint(H)
+
+    bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    bby1 = np.clip(cy - cut_h // 2, 0, H)
+    bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    bby2 = np.clip(cy + cut_h // 2, 0, H)
+
+    return bbx1, bby1, bbx2, bby2
+
+
+def onehot(size, target):
+    vec = torch.zeros(size, dtype=torch.float32)
+    vec[target] = 1.0
+    return vec
+
+
+class SoftTargetCrossEntropy(_WeightedLoss):
+    def __init__(self, weight=None, reduction="mean"):
+        super().__init__(weight=weight, reduction=reduction)
+        self.weight = weight
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        lsm = F.log_softmax(inputs, -1)
+        if self.weight is not None:
+            lsm = lsm * self.weight.unsqueeze(0)
+        loss = -(targets * lsm).sum(-1)
+
+        if self.reduction == "sum":
+            loss = loss.sum()
+
+        elif self.reduction == "mean":
+            loss = loss.mean()
+
+        return loss

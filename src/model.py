@@ -1,10 +1,8 @@
 from typing import Optional
-import logging
 
 import pytorch_lightning as pl
 import torch
-import torchvision
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from pytorch_lightning.metrics.functional.classification import accuracy
 from torch import nn
 

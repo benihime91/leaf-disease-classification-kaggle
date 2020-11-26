@@ -14,10 +14,10 @@ from sklearn.model_selection import train_test_split
 from src.data import LitDatatModule
 from src.model import LitModel
 from src.preprocess import Preprocessor
-from src.utils import ImagePredictionLogger, PrintCallback, load_obj, set_seed
+from src.utils import PrintCallback, load_obj, set_seed
 
 
-def run(config: DictConfig, logger=None, print_layers: bool = False):
+def run(config: DictConfig, logger=None):
     """Runs the training"""
 
     # -------------------- set up seed, wandb, logger --------------- #
@@ -94,12 +94,8 @@ def run(config: DictConfig, logger=None, print_layers: bool = False):
     dm.setup()
 
     logger.info(
-        f"init dataloaders with {config.training.image_dim} image dim and batch_size of {config.training.dataloaders.batch_size}"
+        f"init dataloaders of {config.training.image_dim} image dim & batch_size of {dl_config.batch_size}"
     )
-
-    # grab samples to log predictions on
-    samples = next(iter(dm.val_dataloader()))
-    ims, _ = samples
 
     # set training total steps
     config.training.total_steps = (
@@ -114,11 +110,7 @@ def run(config: DictConfig, logger=None, print_layers: bool = False):
 
     cb_config = config.lightning.callbacks
     cbs = [load_obj(module.class_name)(**module.params) for module in cb_config]
-    # append magePredictionLogger callback to the callback list
-    cbs.append(ImagePredictionLogger(samples))
     cbs.append(PrintCallback(log=logger))
-
-    del samples
 
     # init wandb logger
     wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
@@ -149,10 +141,6 @@ def run(config: DictConfig, logger=None, print_layers: bool = False):
     # ----------------- init lightning-model ------------------------------ #
 
     model = LitModel(config, weights=weights)
-    model.example_input_array = torch.zeros_like(ims)
-
-    if print_layers:
-        model.show_trainable_layers()
 
     # freeze/unfreeze the feature extractor of the model
     model.unfreeze_classifier()
@@ -163,18 +151,20 @@ def run(config: DictConfig, logger=None, print_layers: bool = False):
     model_name = config.model.params.model_name or config.model.class_name
 
     if not config.model.use_custom_base:
-        logger.info(f"init model from {model_name} without custom base")
+        logger.info(f"init {model_name} without custom base")
     else:
-        logger.info(f"init model from {model_name} with custom base")
+        logger.info(f"init {model_name} with custom base")
 
-    logger.info(f"init {config.optimizer.class_name} optimizer")
-    logger.info(f"init {config.scheduler.class_name} scheduler")
+    logger.info(f"using {config.optimizer.class_name} optimizer")
+    logger.info(f"using {config.scheduler.class_name} scheduler")
 
     # ------------------------------ start ---------------------------------- #
 
+    tr_config = config.training
     logger.info(
-        f"training over {config.training.num_epochs} epochs ~ {config.training.total_steps} steps"
+        f"training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps"
     )
+
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, datamodule=dm)
 
@@ -187,6 +177,7 @@ def run(config: DictConfig, logger=None, print_layers: bool = False):
     # init best model
     logger.info(f"Restoring best model weights from {PATH}")
     params = {"config": config, "weights": weights}
+
     loaded_model = model.load_from_checkpoint(PATH, **params)
     torchmodel = loaded_model.net
 
