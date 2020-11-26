@@ -17,10 +17,9 @@ from src.utils import PrintCallback, load_obj, set_seed, SoftTargetCrossEntropy
 
 
 def run(config: DictConfig, logger=None):
-    num_clas = config.training.num_classes
     # modify the datamodule
     def train_dataloader(self):
-        ds = CutMixDatasetWrapper(self.train, num_clas, **config.cutmix)
+        ds = CutMixDatasetWrapper(self.train, **config.cutmix)
         return DataLoader(ds, shuffle=True, **self.config)
 
     LitDataModule.train_dataloader = train_dataloader
