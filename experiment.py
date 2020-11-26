@@ -1,3 +1,8 @@
+"""
+This script runs the experiment with given albumentations augmentations.
+For mixup and cutmix have a look at : cutmix.py & mixup.py
+"""
+
 import logging
 import os
 

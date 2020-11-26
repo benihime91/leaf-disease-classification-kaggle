@@ -1,3 +1,7 @@
+"""
+This script runs the experiment with cutmix image augmentation
+"""
+
 import logging
 import os
 
@@ -149,7 +153,7 @@ def run(config: DictConfig, logger=None):
 
     logger.info(f"Train dataset size: {len(dm.train_dataloader())} .")
     logger.info(f"OOF Validation dataset size: {len(dm.val_dataloader())} .")
-    logger.info(f"OOF Test dataset size:: {len(dm.test_dataloader())} .")
+    logger.info(f"OOF Test dataset size: {len(dm.test_dataloader())} .")
 
     tr_config = config.training
     logger.info(
