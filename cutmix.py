@@ -136,9 +136,9 @@ def run(config: DictConfig, logger=None):
     model_name = config.model.params.model_name or config.model.class_name
 
     if not config.model.use_custom_base:
-        logger.info(f"init from base net : {model_name}, without custom classifier.")
+        logger.info(f"Init from base net : {model_name}, without custom classifier.")
     else:
-        logger.info(f"init from base net: {model_name}, with custom classifier.")
+        logger.info(f"Init from base net: {model_name}, with custom classifier.")
 
     logger.info(f"Using {config.optimizer.class_name} optimizer.")
     logger.info(
@@ -147,9 +147,9 @@ def run(config: DictConfig, logger=None):
 
     logger.info(f"Using {config.scheduler.class_name} scheduler")
 
-    logger.info(f"Train dataset size: ", len(dm.train_dataloader()))
-    logger.info(f"OOF Validation dataset size:", len(dm.val_dataloader()))
-    logger.info(f"OOF Test dataset size:", len(dm.test_dataloader()))
+    logger.info(f"Train dataset size: {len(dm.train_dataloader())} .")
+    logger.info(f"OOF Validation dataset size: {len(dm.val_dataloader())} .")
+    logger.info(f"OOF Test dataset size:: {len(dm.test_dataloader())} .")
 
     tr_config = config.training
     logger.info(

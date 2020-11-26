@@ -30,6 +30,25 @@ def run(config: DictConfig, logger=None):
     # login to wandb
     wandb.login(key=config.logger.api)
 
+    # init wandb logger
+    wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
+    # log the training config to wandb
+    # create a new hparam dictionary with the relevant hparams and
+    # log the hparams to wandb
+    wb_hparam = {
+        "training_fold": config.fold_num,
+        "input_dims": config.training.image_dim,
+        "batch_size": config.training.dataloaders.batch_size,
+        "optimizer": config.optimizer.class_name,
+        "scheduler": config.scheduler.class_name,
+        "learning_rate": config.optimizer.params.lr,
+        "weight_decay": config.optimizer.params.weight_decay,
+        "num_epochs": config.training.num_epochs,
+        "use_loss_fn_weights": config.use_weights,
+        "use_custom_base": config.model.use_custom_base,
+    }
+    wb_logger.log_hyperparams(wb_hparam)
+
     # ---------------------- data preprocessing ---------------------- #
 
     logger.info("Prepare Training/Validation/Test Datasets.")
@@ -108,31 +127,11 @@ def run(config: DictConfig, logger=None):
     cbs = [load_obj(module.class_name)(**module.params) for module in cb_config]
     cbs.append(PrintCallback(log=logger))
 
-    # init wandb logger
-    wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
-
     # init trainer
     _args = trainer_cfg.init_args
     trainer = pl.Trainer(
         callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args
     )
-
-    # log the training config to wandb
-    # create a new hparam dictionary with the relevant hparams and
-    # log the hparams to wandb
-    wb_hparam = {
-        "training_fold": config.fold_num,
-        "input_dims": config.training.image_dim,
-        "batch_size": config.training.dataloaders.batch_size,
-        "optimizer": config.optimizer.class_name,
-        "scheduler": config.scheduler.class_name,
-        "learning_rate": config.optimizer.params.lr,
-        "weight_decay": config.optimizer.params.weight_decay,
-        "num_epochs": config.training.num_epochs,
-        "use_loss_fn_weights": config.use_weights,
-        "use_custom_base": config.model.use_custom_base,
-    }
-    wb_logger.log_hyperparams(wb_hparam)
 
     # ----------------- init lightning-model ------------------------------ #
 
@@ -158,9 +157,9 @@ def run(config: DictConfig, logger=None):
 
     logger.info(f"Using {config.scheduler.class_name} scheduler")
 
-    logger.info(f"Train dataset size: ", len(dm.train_dataloader()))
-    logger.info(f"OOF Validation dataset size:", len(dm.val_dataloader()))
-    logger.info(f"OOF Test dataset size:", len(dm.test_dataloader()))
+    logger.info(f"Train dataset size: {len(dm.train_dataloader())} .")
+    logger.info(f"OOF Validation dataset size: {len(dm.val_dataloader())} .")
+    logger.info(f"OOF Test dataset size:: {len(dm.test_dataloader())} .")
 
     # ------------------------------ start ---------------------------------- #
 
