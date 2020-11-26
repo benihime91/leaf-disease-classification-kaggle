@@ -33,6 +33,26 @@ def run(config: DictConfig, logger=None):
     logger.info(f"using seed {config.training.seed}")
     wandb.login(key=config.logger.api)
 
+    # init wandb logger
+    wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
+
+    # log the training config to wandb
+    # create a new hparam dictionary with the relevant hparams and
+    # log the hparams to wandb
+    wb_hparam = {
+        "training_fold": config.fold_num,
+        "input_dims": config.training.image_dim,
+        "batch_size": config.training.dataloaders.batch_size,
+        "optimizer": config.optimizer.class_name,
+        "scheduler": config.scheduler.class_name,
+        "learning_rate": config.optimizer.params.lr,
+        "weight_decay": config.optimizer.params.weight_decay,
+        "num_epochs": config.training.num_epochs,
+        "use_loss_fn_weights": config.use_weights,
+        "use_custom_base": config.model.use_custom_base,
+    }
+    wb_logger.log_hyperparams(wb_hparam)
+
     # ----------- prepare datasets ------------------- #
 
     logger.info("Prepare Training/Validation/Test Datasets.")
@@ -99,9 +119,6 @@ def run(config: DictConfig, logger=None):
     cbs = [load_obj(module.class_name)(**module.params) for module in cb_config]
     cbs.append(PrintCallback(log=logger))
 
-    # init wandb logger
-    wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
-
     # init trainer
     _args = trainer_cfg.init_args
     trainer = pl.Trainer(
@@ -109,24 +126,6 @@ def run(config: DictConfig, logger=None):
     )
 
     # ----------- init lightning module ------------------- #
-
-    # log the training config to wandb
-    # create a new hparam dictionary with the relevant hparams and
-    # log the hparams to wandb
-    wb_hparam = {
-        "training_fold": config.fold_num,
-        "input_dims": config.training.image_dim,
-        "batch_size": config.training.dataloaders.batch_size,
-        "optimizer": config.optimizer.class_name,
-        "scheduler": config.scheduler.class_name,
-        "learning_rate": config.optimizer.params.lr,
-        "weight_decay": config.optimizer.params.weight_decay,
-        "num_epochs": config.training.num_epochs,
-        "use_loss_fn_weights": config.use_weights,
-        "use_custom_base": config.model.use_custom_base,
-    }
-    wb_logger.log_hyperparams(wb_hparam)
-
     model = LitModel(config, weights=weights)
     # update model loss function to soft cross entropy loss
     model.loss_fn = SoftTargetCrossEntropy(weight=weights)
