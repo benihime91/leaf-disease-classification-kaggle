@@ -75,10 +75,10 @@ def run(config: DictConfig, logger=None):
 
     # init folds for train/valid/test data
     trainFold, valFold = processor.get_fold(fold_num)
-    testFold, valFold = train_test_split(valFold, stratify=valFold.label, test_size=0.5)
+    # testFold, valFold = train_test_split(valFold, stratify=valFold.label, test_size=0.5)
 
     trainFold.reset_index(drop=True, inplace=True)
-    testFold.reset_index(drop=True, inplace=True)
+    # testFold.reset_index(drop=True, inplace=True)
     valFold.reset_index(drop=True, inplace=True)
 
     # init weights for loss function
@@ -114,7 +114,7 @@ def run(config: DictConfig, logger=None):
 
     # init datamodule
     dl_config = config.training.dataloaders
-    dm = LitDataModule(trainFold, valFold, testFold, tfms, dl_config)
+    dm = LitDataModule(trainFold, valFold, valFold, tfms, dl_config)
     dm.setup()
 
     # set training total steps
