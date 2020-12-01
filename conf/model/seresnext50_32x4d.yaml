@@ -1,0 +1,10 @@
+model:
+  class_name: timm.create_model
+  params:
+    pretrained: True
+    model_name: seresnext50_32x4d
+  output_dims: 1000
+  fc1: 512
+  fc2: 256
+  num_classes: ${training.num_classes}
+  use_custom_base: true
