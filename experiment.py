@@ -122,7 +122,7 @@ def run(config: DictConfig, logger=None):
 
     logger.info(f"Train dataset size: {len(dm.train_dataloader())}")
     logger.info(f"Validation dataset size: {len(dm.val_dataloader())}")
-    logger.info(f"Test dataset size: {len(dm.test_dataloader())}")
+    # logger.info(f"Test dataset size: {len(dm.test_dataloader())}")
 
     # ---------------------- init lightning trainer ---------------------- #
 
