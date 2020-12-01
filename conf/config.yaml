@@ -28,14 +28,14 @@ cutmix:
   num_mix: 1 # number of images to cutmix with in a batch
   prob: 0.7 # probability of applying cutmix over a batch
 
-# this is active only if run is set to mixup
-mixup:
-  mixup_alpha: 0.7
-  cutmix_alpha: 0.5
-  cutmix_minmax: null
-  prob: 1.0
-  switch_prob: 0.5
-  mode: batch
-  correct_lam: true
-  label_smoothing: 0.1
-  num_classes: ${training.num_classes}
+# # this is active only if run is set to mixup
+# mixup:
+#   mixup_alpha: 0.7
+#   cutmix_alpha: 0.5
+#   cutmix_minmax: null
+#   prob: 1.0
+#   switch_prob: 0.5
+#   mode: batch
+#   correct_lam: true
+#   label_smoothing: 0.1
+#   num_classes: ${training.num_classes}
