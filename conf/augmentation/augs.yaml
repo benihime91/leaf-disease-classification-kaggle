@@ -10,6 +10,17 @@ augmentation:
       params:
         p: 0.5
 
+    - class_name: albumentations.Transpose
+      params:
+        p: 0.5
+
+    - class_name: albumentations.HueSaturationValue
+      params:
+        hue_shift_limit: 0.2
+        sat_shift_limit: 0.2
+        val_shift_limit: 0.2
+        p: 0.5
+
     - class_name: albumentations.RandomBrightnessContrast
       params:
         p: 0.5
@@ -18,14 +29,18 @@ augmentation:
       params:
         p: 0.5
 
+    - class_name: albumentations.Cutout
+      params:
+        p: 0.5
+
+    - class_name: albumentations.CoarseDropout
+      params:
+        p: 0.5
+
     - class_name: albumentations.Normalize
       params:
         max_pixel_value: 255.0
         p: 1.0
-
-    - class_name: albumentations.Cutout
-      params:
-        p: 0.5
 
     - class_name: albumentations.pytorch.transforms.ToTensorV2
       params:

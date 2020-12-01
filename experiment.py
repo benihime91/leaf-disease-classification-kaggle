@@ -121,8 +121,8 @@ def run(config: DictConfig, logger=None):
     config.training.total_steps = (len(dm.train_dataloader()) * config.training.num_epochs)
 
     logger.info(f"Train dataset size: {len(dm.train_dataloader())}")
-    logger.info(f"OOF Validation dataset size: {len(dm.val_dataloader())}")
-    logger.info(f"OOF Test dataset size: {len(dm.test_dataloader())}")
+    logger.info(f"Validation dataset size: {len(dm.val_dataloader())}")
+    logger.info(f"Test dataset size: {len(dm.test_dataloader())}")
 
     # ---------------------- init lightning trainer ---------------------- #
 
