@@ -79,6 +79,7 @@ class LitModel(pl.LightningModule):
         # init transfer learning network
         if self.config.model.modifiers.use_custom_base:
             self.decoder = self._creat_head()
+            self.encoder = self._cut_model(self.encoder)
             self.net = BasicTransferLearningModel(self.encoder, self.decoder)
 
         elif not self.config.model.modifiers.use_custom_base:
@@ -95,6 +96,11 @@ class LitModel(pl.LightningModule):
 
         # init metrics
         self.metric_fn = accuracy
+
+    def _cut_model(self, model: nn.Module, upto: int = -2):
+        _layers = list(model.children())[:upto]
+        feature_extractor = nn.Sequential(*_layers)
+        return feature_extractor
 
     def ___init_modules(self, m):
         classname = m.__class__.__name__
