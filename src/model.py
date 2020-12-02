@@ -56,8 +56,10 @@ class AdaptiveConcatPool2d(nn.Module):
         return torch.cat([self.mp(x), self.ap(x)], 1)
 
 
-def _num_feats(model: nn.Module):
-    _output = torch.zeros((2, 3, 224, 224))
+def _num_feats(model: nn.Module, dims: int = None):
+    if dims is None:
+        dims = 120
+    _output = torch.zeros((2, 3, dims, dims))
     _output = model(_output)
     return _output.shape[1]
 
@@ -124,7 +126,9 @@ class LitModel(pl.LightningModule):
             # cut encoder upto the feature extractors
             self.encoder = _cut_model(self.encoder)
 
-            self.ftrs = _num_feats(self.encoder) * 2
+            self.ftrs = (
+                _num_feats(self.encoder, dims=self.config.training.image_dim) * 2
+            )
             self.outs = self.num_classes
             self.hls = self.config.model.modifiers.linear_ftrs
             # init decoder
