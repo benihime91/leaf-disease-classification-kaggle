@@ -78,7 +78,7 @@ class LitModel(pl.LightningModule):
 
         # init transfer learning network
         if self.config.model.modifiers.use_custom_base:
-            self.decoder = self._creat_head()
+            self.decoder = self._create_head()
             self.encoder = self._cut_model(self.encoder)
             self.net = BasicTransferLearningModel(self.encoder, self.decoder)
 
@@ -116,22 +116,22 @@ class LitModel(pl.LightningModule):
         _output = self.encoder(_output)
         return _output.shape[1]
 
-    def _creat_head(self):
-        nf = self._num_feats_classifier()
+    def _create_head(self):
+        nf = self._num_feats_classifier() * 2
         n_out = self.num_classes
         lin_ftrs = self.config.model.modifiers.linear_ftrs
         lin_ftrs = [nf, lin_ftrs, n_out]
         pool = AdaptiveConcatPool2d()
         layers = [pool, nn.Flatten()]
         layers += [
-            nn.BatchNorm1d(lin_ftrs[0]),
+            nn.BatchNorm1d(lin_ftrs[0], eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.Dropout(0.25),
             nn.ReLU(inplace=True),
-            nn.Linear(lin_ftrs[0], lin_ftrs[1]),
-            nn.BatchNorm1d(lin_ftrs[1]),
+            nn.Linear(lin_ftrs[0], lin_ftrs[1], bias=False),
+            nn.BatchNorm1d(lin_ftrs[1], eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
             nn.Dropout(0.5),
             nn.ReLU(inplace=True),
-            nn.Linear(512, lin_ftrs[2], bias=False),
+            nn.Linear(lin_ftrs[1], lin_ftrs[2], bias=False),
         ]
         return nn.Sequential(*layers)
 
