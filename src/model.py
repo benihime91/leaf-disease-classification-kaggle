@@ -82,7 +82,8 @@ class LitModel(pl.LightningModule):
 
         elif not self.config.model.modifiers.use_custom_base:
             last_layer = self.config.model.modifiers.last_layer
-            self.encoder._modules[last_layer].out_features = self.num_classes
+            num_ftrs = self.encoder._modules[last_layer].in_features
+            self.encoder._modules[last_layer] = nn.Linear(num_ftrs, self.num_classes)
             self.net = self.encoder
 
         self.___init_modules(self.net)
