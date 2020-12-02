@@ -5,6 +5,7 @@ For mixup and cutmix have a look at : cutmix.py & mixup.py
 
 import logging
 import os
+from collections import OrderedDict
 
 import albumentations as A
 import pandas as pd
@@ -40,18 +41,19 @@ def run(config: DictConfig, logger=None):
     # log the training config to wandb
     # create a new hparam dictionary with the relevant hparams and
     # log the hparams to wandb
-    wb_hparam = {
-        "training_fold": config.fold_num,
-        "input_dims": config.training.image_dim,
-        "batch_size": config.training.dataloaders.batch_size,
-        "optimizer": config.optimizer.class_name,
-        "scheduler": config.scheduler.class_name,
-        "learning_rate": config.optimizer.params.lr,
-        "weight_decay": config.optimizer.params.weight_decay,
-        "num_epochs": config.training.num_epochs,
-        "use_loss_fn_weights": config.use_weights,
-        "use_custom_base": config.model.use_custom_base,
-    }
+    wb_hparam = OrderedDict(
+        {
+            "training_fold": config.fold_num,
+            "input_dims": config.training.image_dim,
+            "batch_size": config.training.dataloaders.batch_size,
+            "optimizer": config.optimizer.class_name,
+            "scheduler": config.scheduler.class_name,
+            "learning_rate": config.optimizer.params.lr,
+            "weight_decay": config.optimizer.params.weight_decay,
+            "num_epochs": config.training.num_epochs,
+            "use_loss_fn_weights": config.use_weights,
+        }
+    )
     wb_logger.log_hyperparams(wb_hparam)
 
     # ---------------------- data preprocessing ---------------------- #
@@ -118,7 +120,9 @@ def run(config: DictConfig, logger=None):
     dm.setup()
 
     # set training total steps
-    config.training.total_steps = (len(dm.train_dataloader()) * config.training.num_epochs)
+    config.training.total_steps = (
+        len(dm.train_dataloader()) * config.training.num_epochs
+    )
 
     logger.info(f"Train dataset size: {len(dm.train_dataloader())}")
     logger.info(f"Validation dataset size: {len(dm.val_dataloader())}")
@@ -136,7 +140,9 @@ def run(config: DictConfig, logger=None):
 
     # init trainer
     _args = trainer_cfg.init_args
-    trainer = pl.Trainer(callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args)
+    trainer = pl.Trainer(
+        callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args
+    )
 
     # ----------------- init lightning-model ------------------------------ #
 
@@ -150,16 +156,16 @@ def run(config: DictConfig, logger=None):
 
     model_name = config.model.params.model_name or config.model.class_name
 
-    if not config.model.use_custom_base:
-        logger.info(f"Init from base net: {model_name}, without custom classifier.")
-    else:
-        logger.info(f"Init from base net: {model_name}, with custom classifier.")
-
+    logger.info(f"Init from base net: {model_name}")
     logger.info(f"Uses {str(config.optimizer.class_name).split('.')[-1]} optimizer.")
-    logger.info(f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}")
+    logger.info(
+        f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}"
+    )
     logger.info(f"Uses {str(config.scheduler.class_name).split('.')[-1]} scheduler.")
     tr_config = config.training
-    logger.info(f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps.")
+    logger.info(
+        f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps."
+    )
 
     # ------------------------------ start ---------------------------------- #
 
