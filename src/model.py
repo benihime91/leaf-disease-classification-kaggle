@@ -3,7 +3,8 @@ from typing import Optional
 import pytorch_lightning as pl
 import torch
 from torch import nn
-from omegaconf import DictConfig
+
+# from omegaconf import DictConfig
 from pytorch_lightning.metrics.functional.classification import accuracy
 from torch import nn
 
@@ -108,7 +109,7 @@ class LitModel(pl.LightningModule):
         weights: weights for cross-entropy loss
     """
 
-    def __init__(self, config: DictConfig, weights: Optional[torch.Tensor] = None):
+    def __init__(self, config, weights: Optional[torch.Tensor] = None):
         super().__init__()
         self.config = config
         self.num_classes = config.model.num_classes
