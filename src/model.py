@@ -56,6 +56,49 @@ class AdaptiveConcatPool2d(nn.Module):
         return torch.cat([self.mp(x), self.ap(x)], 1)
 
 
+def _num_feats(model: nn.Module):
+    _output = torch.zeros((2, 3, 224, 224))
+    _output = model(_output)
+    return _output.shape[1]
+
+
+def _create_head(nf: int, n_out: int, lin_ftrs: int = None):
+    lin_ftrs = [nf, 512, n_out] if lin_ftrs is None else [nf, lin_ftrs, n_out]
+
+    pool = AdaptiveConcatPool2d()
+
+    layers = [pool, nn.Flatten()]
+
+    layers += [
+        nn.BatchNorm1d(lin_ftrs[0]),
+        nn.Dropout(0.25),
+        nn.ReLU(inplace=True),
+        nn.Linear(lin_ftrs[0], lin_ftrs[1], bias=False),
+        nn.BatchNorm1d(lin_ftrs[1]),
+        nn.Dropout(0.5),
+        nn.ReLU(inplace=True),
+        nn.Linear(lin_ftrs[1], lin_ftrs[2], bias=False),
+    ]
+
+    return nn.Sequential(*layers)
+
+
+def _cut_model(model: nn.Module, upto: int = -2):
+    _layers = list(model.children())[:upto]
+    feature_extractor = nn.Sequential(*_layers)
+    return feature_extractor
+
+
+def _init_modules(m: nn.Module):
+    classname = m.__class__.__name__
+    if classname.find("Conv") != -1:
+        nn.init.kaiming_normal_(m.weight.data)
+    elif classname.find("BatchNorm") != -1:
+        nn.init.kaiming_normal_(m.weight.data)
+    elif classname.find("Linear") != -1:
+        nn.init.kaiming_normal_(m.weight.data)
+
+
 class LitModel(pl.LightningModule):
     """Transfer Learning with pre-trained model
     Args:
@@ -78,8 +121,15 @@ class LitModel(pl.LightningModule):
 
         # init transfer learning network
         if self.config.model.modifiers.use_custom_base:
-            self.decoder = self._create_head()
-            self.encoder = self._cut_model(self.encoder)
+            # cut encoder upto the feature extractors
+            self.encoder = _cut_model(self.encoder)
+
+            self.ftrs = _num_feats(self.encoder) * 2
+            self.outs = self.num_classes
+            self.hls = self.config.model.modifiers.linear_ftrs
+            # init decoder
+            self.decoder = _create_head(self.ftrs, self.outs, self.hls)
+            # init model
             self.net = BasicTransferLearningModel(self.encoder, self.decoder)
 
         elif not self.config.model.modifiers.use_custom_base:
@@ -88,52 +138,14 @@ class LitModel(pl.LightningModule):
             self.encoder._modules[last_layer] = nn.Linear(num_ftrs, self.num_classes)
             self.net = self.encoder
 
-        self.___init_modules(self.net)
+        _init_modules(self.net)
 
         # init loss_fn
         self.loss_fn = nn.CrossEntropyLoss(weight=weights)
-        self.valid_loss_fn = nn.CrossEntropyLoss()
+        self.val_loss = nn.CrossEntropyLoss()
 
         # init metrics
         self.metric_fn = accuracy
-
-    def _cut_model(self, model: nn.Module, upto: int = -2):
-        _layers = list(model.children())[:upto]
-        feature_extractor = nn.Sequential(*_layers)
-        return feature_extractor
-
-    def ___init_modules(self, m):
-        classname = m.__class__.__name__
-        if classname.find("Conv") != -1:
-            nn.init.kaiming_normal_(m.weight.data)
-        elif classname.find("BatchNorm") != -1:
-            nn.init.kaiming_normal_(m.weight.data)
-        elif classname.find("Linear") != -1:
-            nn.init.kaiming_normal_(m.weight.data)
-
-    def _num_feats_classifier(self):
-        _output = torch.zeros((2, 3, 224, 224))
-        _output = self.encoder(_output)
-        return _output.shape[1]
-
-    def _create_head(self):
-        nf = self._num_feats_classifier() * 2
-        n_out = self.num_classes
-        lin_ftrs = self.config.model.modifiers.linear_ftrs
-        lin_ftrs = [nf, lin_ftrs, n_out]
-        pool = AdaptiveConcatPool2d()
-        layers = [pool, nn.Flatten()]
-        layers += [
-            nn.BatchNorm1d(lin_ftrs[0], eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-            nn.Dropout(0.25),
-            nn.ReLU(inplace=True),
-            nn.Linear(lin_ftrs[0], lin_ftrs[1], bias=False),
-            nn.BatchNorm1d(lin_ftrs[1], eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-            nn.Dropout(0.5),
-            nn.ReLU(inplace=True),
-            nn.Linear(lin_ftrs[1], lin_ftrs[2], bias=False),
-        ]
-        return nn.Sequential(*layers)
 
     def show_trainable_layers(self):
         # prints all the trainable layers of the model
@@ -193,7 +205,7 @@ class LitModel(pl.LightningModule):
         logits = self(x)
         preds = torch.argmax(logits, dim=1)
 
-        loss = self.valid_loss_fn(logits, y)
+        loss = self.val_loss(logits, y)
         acc = self.metric_fn(preds, y)
 
         self.log("val_loss", loss, prog_bar=True)
@@ -205,7 +217,7 @@ class LitModel(pl.LightningModule):
         logits = self(x)
         preds = torch.argmax(logits, dim=1)
 
-        loss = self.valid_loss_fn(logits, y)
+        loss = self.val_loss(logits, y)
         acc = self.metric_fn(preds, y)
 
         self.log("test_loss", loss, on_step=False, on_epoch=True)
@@ -263,7 +275,7 @@ class LitModel(pl.LightningModule):
 
 #         # init loss_fn
 #         self.loss_fn = nn.CrossEntropyLoss(weight=weights)
-#         self.valid_loss_fn = nn.CrossEntropyLoss()
+#         self.val_loss = nn.CrossEntropyLoss()
 
 #         # init metrics
 #         self.metric_fn = accuracy
@@ -318,7 +330,7 @@ class LitModel(pl.LightningModule):
 #         logits = self(x)
 #         preds = torch.argmax(logits, dim=1)
 
-#         loss = self.valid_loss_fn(logits, y)
+#         loss = self.val_loss(logits, y)
 #         acc = self.metric_fn(preds, y)
 
 #         self.log("val_loss", loss, prog_bar=True)
@@ -330,7 +342,7 @@ class LitModel(pl.LightningModule):
 #         logits = self(x)
 #         preds = torch.argmax(logits, dim=1)
 
-#         loss = self.valid_loss_fn(logits, y)
+#         loss = self.val_loss(logits, y)
 #         acc = self.metric_fn(preds, y)
 
 #         self.log("test_loss", loss, on_step=False, on_epoch=True)
