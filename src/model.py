@@ -47,6 +47,7 @@ class AdaptiveConcatPool2d(nn.Module):
     "Layer that concats `AdaptiveAvgPool2d` and `AdaptiveMaxPool2d`"
 
     def __init__(self, size=None):
+        super(AdaptiveConcatPool2d, self).__init__()
         self.size = size or 1
         self.ap = nn.AdaptiveAvgPool2d(self.size)
         self.mp = nn.AdaptiveMaxPool2d(self.size)
