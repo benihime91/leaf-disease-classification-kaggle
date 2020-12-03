@@ -5,10 +5,12 @@ from omegaconf import DictConfig
 
 from cutmix import run as cut_mix_run
 from experiment import run
-from mixup import run as mix_run
 import warnings
 
-__all__ = {"experiment": run, "mixup": mix_run, "cutmix": cut_mix_run,}
+__all__ = {
+    "experiment": run,
+    "cutmix": cut_mix_run,
+}
 
 log = logging.getLogger(__name__)
 
