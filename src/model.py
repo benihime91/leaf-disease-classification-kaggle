@@ -92,13 +92,9 @@ def _cut_model(model: nn.Module, upto: int = -2):
     return feature_extractor
 
 
-def _init_modules(m: nn.Module):
+def weights_init(m):
     classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        nn.init.kaiming_normal_(m.weight.data)
-    elif classname.find("BatchNorm") != -1:
-        nn.init.kaiming_normal_(m.weight.data)
-    elif classname.find("Linear") != -1:
+    if classname.find("Linear") != -1:
         nn.init.kaiming_normal_(m.weight.data)
 
 
@@ -143,7 +139,7 @@ class LitModel(pl.LightningModule):
             self.encoder._modules[last_layer] = nn.Linear(num_ftrs, self.num_classes)
             self.net = self.encoder
 
-        _init_modules(self.net)
+        self.net.apply(weights_init)
 
         # init loss_fn
         self.loss_fn = nn.CrossEntropyLoss(weight=weights)
