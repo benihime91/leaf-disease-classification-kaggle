@@ -21,6 +21,7 @@ json_dir: /kaggle/input/cassava-leaf-disease-classification/label_num_to_disease
 fold_csv_dir: /kaggle/working/leaf-disease-classification-kaggle/data/fold_df.csv
 run: experiment # name of the python script to run for training without the .py extension
 log_to_stdout: false # log epoch level metrics to stdout
+use_label_smoothing: true
 
 # this is active only if run is set to cutmix
 cutmix:
