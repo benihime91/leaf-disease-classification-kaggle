@@ -39,7 +39,7 @@ def run(config: DictConfig, logger=None):
     wandb.login(key=config.logger.api)
 
     # init wandb logger
-    wb_logger = load_obj(config.logger.class_name)(**config.logger.params)
+    wb = load_obj(config.logger.class_name)(**config.logger.params)
 
     # log the training config to wandb
     # create a new hparam dictionary with the relevant hparams and
@@ -54,14 +54,12 @@ def run(config: DictConfig, logger=None):
             "learning_rate": config.optimizer.params.lr,
             "weight_decay": config.optimizer.params.weight_decay,
             "num_epochs": config.training.num_epochs,
-            "use_loss_fn_weights": config.use_weights,
         }
     )
-    wb_logger.log_hyperparams(wb_hparam)
+    wb.log_hyperparams(wb_hparam)
 
     # ----------- prepare datasets ------------------- #
-
-    logger.info("Prepare Training/Validation/Test Datasets.")
+    logger.info("Prepare Training/Validation Datasets.")
 
     processor = Preprocessor(config.csv_dir, config.json_dir, config.image_dir, 5)
     df = pd.read_csv(config.fold_csv_dir)
@@ -78,15 +76,9 @@ def run(config: DictConfig, logger=None):
     valFold.reset_index(drop=True, inplace=True)
 
     # init weights for loss function
-    weights = None
-    if config.use_weights:
-        weights = processor.weights
-        weights = torch.tensor(list(weights.values()))
-        weights = 1 - weights
-        weights = weights.div(sum(weights))
+    weights = None # no weights for cutmix
 
     tfms_config = config.augmentation
-
     trn_augs = A.Compose(
         [load_obj(augs.class_name)(**augs.params) for augs in tfms_config.train_augs],
         p=1.0,
@@ -100,21 +92,14 @@ def run(config: DictConfig, logger=None):
         p=1.0,
     )
 
-    tfms = {
-        "train": trn_augs,
-        "valid": valid_augs,
-        "test": test_augs,
-    }
-
+    tfms = {"train": trn_augs, "valid": valid_augs, "test": test_augs,}
     # init datamodule
     dl_config = config.training.dataloaders
     dm = LitDataModule(trainFold, valFold, valFold, tfms, dl_config)
     dm.setup()
 
     # set training total steps
-    config.training.total_steps = (
-        len(dm.train_dataloader()) * config.training.num_epochs
-    )
+    config.training.total_steps = (len(dm.train_dataloader()) * config.training.num_epochs)
 
     logger.info(f"Train dataset size: {len(dm.train_dataloader())}")
     logger.info(f"Validation dataset size: {len(dm.val_dataloader())}")
@@ -127,47 +112,41 @@ def run(config: DictConfig, logger=None):
 
     cb_config = config.lightning.callbacks
     cbs = [load_obj(module.class_name)(**module.params) for module in cb_config]
-    cbs.append(PrintCallback(log=logger))
+
+    if config.log_to_stdout:
+        cbs.append(PrintCallback(log=logger))
 
     # init trainer
-    _args = trainer_cfg.init_args
-    trainer = pl.Trainer(
-        callbacks=cbs, checkpoint_callback=chkpt, logger=wb_logger, **_args
-    )
+    args = trainer_cfg.init_args
+    trainer = pl.Trainer(callbacks=cbs, checkpoint_callback=chkpt, logger=wb, **args)
 
     # ----------- init lightning module ------------------- #
     logger.info("Build network.")
-
     model = LitModel(config, weights=weights)
     # update model loss function to soft cross entropy loss
     model.loss_fn = SoftTargetCrossEntropy(weight=weights)
     model.unfreeze_classifier()
 
-    wb_logger.watch(model.net)
+    wb.watch(model.net)
 
     model_name = config.model.params.model_name or config.model.class_name
 
     logger.info(f"Init from base net: {model_name}")
     logger.info(f"Uses {str(config.optimizer.class_name).split('.')[-1]} optimizer.")
-    logger.info(
-        f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}"
-    )
+    logger.info(f"Learning Rate: {config.optimizer.params.lr}, Weight Decay: {config.optimizer.params.weight_decay}")
     logger.info(f"Uses {str(config.scheduler.class_name).split('.')[-1]} scheduler.")
+    
     tr_config = config.training
-    logger.info(
-        f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps."
-    )
+    
+    logger.info(f"Training over {tr_config.num_epochs} epochs ~ {tr_config.total_steps} steps.")
 
     # ----------- start train/validaiton/test ------------------- #
-
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, datamodule=dm)
-
     # Compute metrics on test dataset
     _ = trainer.test(model, datamodule=dm, ckpt_path=chkpt.best_model_path)
-
+    
     # ----------- finish experiment/cleanup/save weights ------------------- #
-
     PATH = chkpt.best_model_path  # path to the best performing model
     WEIGHTS_PATH = config.training.model_save_dir
 
@@ -179,10 +158,6 @@ def run(config: DictConfig, logger=None):
     torchmodel = loaded_model.net
 
     torch.save(torchmodel.state_dict(), WEIGHTS_PATH)
-
-    del torchmodel
-    del loaded_model
-
     # upload the weights file to wandb
     wandb.save(WEIGHTS_PATH)
 
