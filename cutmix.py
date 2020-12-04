@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 from src.data import CutMixDatasetWrapper, LitDataModule
 from src.model import LitModel
 from src.preprocess import Preprocessor
-from src.utils import LabelSmoothingCrossEntropy, PrintCallback, load_obj, set_seed, SoftTargetCrossEntropy
+from src.utils import PrintCallback, load_obj, set_seed, SoftTargetCrossEntropy
 
 
 def run(config: DictConfig, logger=None):
@@ -124,10 +124,7 @@ def run(config: DictConfig, logger=None):
     logger.info("Build network.")
     model = LitModel(config, weights=weights)
     # update model loss function to soft cross entropy loss
-    if config.use_label_smoothing:
-        model.loss_fn = LabelSmoothingCrossEntropy(smoothing=0.1)
-    else:
-        model.loss_fn = SoftTargetCrossEntropy(weight=weights)
+    model.loss_fn = SoftTargetCrossEntropy(weight=weights)
     model.unfreeze_classifier()
 
     wb.watch(model.net)
