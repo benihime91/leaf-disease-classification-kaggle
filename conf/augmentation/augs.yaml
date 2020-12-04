@@ -2,8 +2,8 @@ augmentation:
   train_augs:
     - class_name: albumentations.Resize
       params:
-        height: 800
-        width: 800
+        height: ${training.image_dim}
+        width:  ${training.image_dim}
         p: 1.0
 
     - class_name: albumentations.HorizontalFlip
@@ -32,18 +32,12 @@ augmentation:
     - class_name: albumentations.Cutout
       params:
         p: 0.5
-
-    - class_name: albumentations.CenterCrop 
-      params:
-        height: ${training.image_dim}
-        width: ${training.image_dim}
-        p: 0.5
     
     - class_name: albumentations.RandomResizedCrop
       params:
         height: ${training.image_dim}
         width:  ${training.image_dim}
-        p: 1.0
+        p: 0.5
 
     - class_name: albumentations.Normalize
       params:
