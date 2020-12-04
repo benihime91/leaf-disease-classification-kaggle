@@ -43,7 +43,7 @@ augmentation:
       params:
         height: ${training.image_dim}
         width:  ${training.image_dim}
-        p: 0.5
+        p: 1.0
 
     - class_name: albumentations.Normalize
       params:
