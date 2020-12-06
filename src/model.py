@@ -65,7 +65,7 @@ def _num_feats(model: nn.Module, dims: int = None):
     return _output.shape[1]
 
 
-def _create_head(nf: int, n_out: int, lin_ftrs: int = None):
+def _create_head(nf: int, n_out: int, lin_ftrs: int = None, act: nn.Module = nn.ReLU):
     lin_ftrs = [nf, 512, n_out] if lin_ftrs is None else [nf, lin_ftrs, n_out]
 
     pool = AdaptiveConcatPool2d()
@@ -75,11 +75,11 @@ def _create_head(nf: int, n_out: int, lin_ftrs: int = None):
     layers += [
         nn.BatchNorm1d(lin_ftrs[0]),
         nn.Dropout(0.25),
-        nn.ReLU(inplace=True),
+        act(inplace=True),
         nn.Linear(lin_ftrs[0], lin_ftrs[1], bias=False),
         nn.BatchNorm1d(lin_ftrs[1]),
         nn.Dropout(0.5),
-        nn.ReLU(inplace=True),
+        act(inplace=True),
         nn.Linear(lin_ftrs[1], lin_ftrs[2], bias=False),
     ]
 
@@ -123,9 +123,11 @@ class LitModel(pl.LightningModule):
             # cut encoder upto the feature extractors
             self.encoder = _cut_model(self.encoder)
 
-            self.ftrs = _num_feats(self.encoder, dims=self.config.training.image_dim) * 2
+            self.ftrs = (
+                _num_feats(self.encoder, dims=self.config.training.image_dim) * 2
+            )
             self.outs = self.num_classes
-            self.hls  = self.config.model.modifiers.linear_ftrs
+            self.hls = self.config.model.modifiers.linear_ftrs
             # init decoder
             self.decoder = _create_head(self.ftrs, self.outs, self.hls)
             # init model
