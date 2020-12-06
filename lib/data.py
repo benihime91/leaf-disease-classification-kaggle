@@ -32,13 +32,50 @@ class CassaveDataset(Dataset):
         return img, clas
 
 
+class CutmixDs(Dataset):
+    def __init__(self, ds, num_class, num_mix=1, beta=1.0, prob=0.6) -> None:
+        self.dataset = ds
+        self.num_class = num_class
+        self.num_mix = num_mix
+        self.beta = beta
+        self.prob = prob
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        img, lb = self.dataset[index]
+        lb_onehot = onehot(self.num_class, lb)
+
+        for _ in range(self.num_mix):
+            r = np.random.rand(1)
+            if self.beta <= 0 or r > self.prob:
+                continue
+
+            # generate mixed sample
+            lam = np.random.beta(self.beta, self.beta)
+            rand_index = random.choice(range(len(self)))
+
+            img2, lb2 = self.dataset[rand_index]
+            lb2_onehot = onehot(self.num_class, lb2)
+
+            bbx1, bby1, bbx2, bby2 = rand_bbox(img.size(), lam)
+            img[:, bbx1:bbx2, bby1:bby2] = img2[:, bbx1:bbx2, bby1:bby2]
+            lam = 1 - (
+                (bbx2 - bbx1) * (bby2 - bby1) / (img.size()[-1] * img.size()[-2])
+            )
+            lb_onehot = lb_onehot * lam + lb2_onehot * (1.0 - lam)
+
+        return img, lb_onehot
+
+
 class CassavaDataModule(LightningDataModule):
     def __init__(
         self,
         datafiles: Dict[str, pd.DataFrame],
         augs: Dict[str, A.Compose],
         conf: Optional[DictConfig] = None,
-        dataset_func: Optional[Callable] = None,
+        use_cutmix: bool = False,
     ):
         self.train_data = datafiles["train"]
         self.valid_data = datafiles["valid"]
@@ -49,13 +86,13 @@ class CassavaDataModule(LightningDataModule):
         self.test_augs = augs["test"] or augs["valid"]
 
         self.config = conf
-        self.dataset_func = dataset_func
+        self.use_cutmix = use_cutmix
 
     def setup(self, stage: Optional[str] = None):
         if stage == "fit" or stage is None:
             self.train_ds = CassaveDataset(self.train_data, self.train_augs)
-            if self.dataset_func is not None:
-                self.train_ds = self.dataset_func(self.train_ds)
+            if self.use_cutmix:
+                self.train_ds = CutmixDs(self.train_ds, prob=0.6)
 
             self.val_ds = CassaveDataset(self.valid_data, self.valid_augs)
 

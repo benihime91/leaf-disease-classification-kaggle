@@ -1,4 +1,5 @@
 from .include import *
+from torch.nn.modules.loss import _WeightedLoss
 
 
 def load_obj(obj_path: str, default_obj_path: str = "") -> Any:
@@ -54,7 +55,9 @@ def onehot(size, target):
     return vec
 
 
-class SoftTargetCrossEntropy(_WeightedLoss):
+class CrossEntropyLossFlat(_WeightedLoss):
+    "CrossEntropy loss for one hot labels"
+
     def __init__(self, weight=None, reduction="mean"):
         super().__init__(weight=weight, reduction=reduction)
         self.weight = weight
