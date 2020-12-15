@@ -89,7 +89,7 @@ def main(
     )
 
     valid_augments = A.Compose([A.Resize(dims, dims, p=1.0),])
-    item_tfms = [AlbumentationsTransform(train_augments, valid_augments)]
+    item_tfms  = [AlbumentationsTransform(train_augments, valid_augments)]
     batch_tfms = [Normalize.from_stats(*imagenet_stats)]
 
     print(f"base: {encoder}; lr: {lr}; wd: {wd}; epochs: {epochs}; seed: {seed}; size: {dims}; fold: {fold}; bs: {bs};")
@@ -103,8 +103,11 @@ def main(
         replace_with_mish(model)
     else:
         model = TransferLearningModel(encoder, dls.c, cut=cut)
+    
+    apply_init(model.decoder, nn.init.kaiming_normal_)
 
-    if weights is not None:  model.load_state_dict(torch.load(weights))
+    if weights is not None:  
+        model.load_state_dict(torch.load(weights))
 
     if opt == "adam":
         print(f"Using Adam Optimizer")
@@ -117,11 +120,9 @@ def main(
         opt_func = Adam
 
 
-    learn = Learner(dls, model, metrics=[accuracy], opt_func=opt_func,
-                loss_func=LabelSmoothingCrossEntropy(), splitter=custom_splitter,)
-
-    learn = learn.to_native_fp16()
-    learn.unfreeze()
+    learn = Learner(dls, model, metrics=[accuracy], 
+                opt_func=opt_func, loss_func=LabelSmoothingCrossEntropy(), 
+                splitter=custom_splitter,).to_native_fp16()
 
     if lrfinder:
         IN_NOTEBOOK = True
@@ -140,14 +141,18 @@ def main(
             batch_cbs.append(MixUp(mixup))
 
         if sched_type == "one_cycle":
-            print(f"Using One Cycle Annealing with pct_start: {pct_start};")
+            print(f"Using One Cycle Annealing with pct_start: {pct_start}")
+            learn.freeze()
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
+            learn.unfreeze()
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
         elif sched_type == "flat_cos":
             print(f"Using Flat Cos Annealing with pct_start: {pct_start};")
+            learn.freeze()
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
+            learn.unfreeze()
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
 
         learn = learn.to_native_fp32()
