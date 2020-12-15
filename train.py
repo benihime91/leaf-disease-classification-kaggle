@@ -14,10 +14,11 @@ from src.fast_utils import *
 logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s",
                 datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO,)
 
-PROJECT = "kaggle-leaf-disease-fastai-runs"
-
 logger = logging.getLogger("wandb")
 logger.setLevel(logging.ERROR)
+
+PROJECT = "kaggle-leaf-disease-fastai-runs"
+run = wandb.init(project=PROJECT)
 
 
 @delegates(DataBlock)
@@ -69,7 +70,6 @@ def main(
     set_seed(seed, reproducible=True)
 
     idx = generate_random_id()
-    wandb.init(project=PROJECT)
 
     save_name = f"{encoder}-fold={fold}-{idx}"
     save_dir = os.getcwd()
