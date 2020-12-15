@@ -12,13 +12,10 @@ from fastcore.script import *
 from src.fast_utils import *
 
 logger = logging.getLogger("wandb")
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-    datefmt="%m/%d/%Y %H:%M:%S",
-    level=logging.INFO,
-)
-
 logger.setLevel(logging.ERROR)
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s",
+                datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO,)
 
 PROJECT = "kaggle-leaf-disease-fastai-runs"
 API_KEY = "a74f67fd5fae293e301ea8b6710ee0241f595a63"
@@ -30,24 +27,18 @@ def get_data(src_pth: str, im_pth: str, curr_fold: int, bs: int = 64, **kwargs):
     log.info(src_pth)
     log.info(im_pth)
     df = pd.read_csv(src_pth)
-    df["filePath"] = [
-        os.path.join(im_pth, df["image_id"][idx]) for idx in range(len(df))
-    ]
-
+    df["filePath"] = [os.path.join(im_pth, df["image_id"][idx]) for idx in range(len(df))]
     df["is_valid"] = [df["kfold"][n] == curr_fold for n in range(len(df))]
     df = df.sample(frac=1).reset_index(drop=True, inplace=False)
 
-    cassava = DataBlock(
-        blocks=(ImageBlock, CategoryBlock),
-        splitter=ColSplitter(col="is_valid"),
-        get_x=lambda x: x["filePath"],
-        get_y=lambda x: x["label"],
-        **kwargs,
-    )
+    cassava = DataBlock(blocks=(ImageBlock, CategoryBlock),
+                    splitter=ColSplitter(col="is_valid"),
+                    get_x=lambda x: x["filePath"],
+                    get_y=lambda x: x["label"],
+                    **kwargs,)
 
     n_gpus = num_distrib() or 1
     workers = min(8, num_cpus() // n_gpus)
-
     return cassava.dataloaders(df, bs=bs, num_worker=workers)
 
 
@@ -98,15 +89,12 @@ def main(
             A.RandomBrightnessContrast(
                 brightness_limit=(-0.1, 0.1), contrast_limit=(-0.1, 0.1), p=0.5
             ),
-            A.Cutout(p=0.5),
+            A.Cutout(p=0.5, num_holes=20),
+            A.CoarseDropout(p=0.5),
         ]
     )
 
-    valid_augments = A.Compose(
-        [
-            A.Resize(dims, dims, p=1.0),
-        ]
-    )
+    valid_augments = A.Compose([A.Resize(dims, dims, p=1.0),])
     item_tfms = [AlbumentationsTransform(train_augments, valid_augments)]
     batch_tfms = [Normalize.from_stats(*imagenet_stats)]
 
@@ -138,30 +126,29 @@ def main(
 
     callbacks = [WandbCallback(log_model=False, log_preds=False, seed=seed)]
 
-    learn = Learner(
-        dls,
-        model,
-        loss_func=LabelSmoothingCrossEntropy(),
-        opt_func=opt_func,
-        splitter=custom_splitter,
-        cbs=callbacks,
-        train_bn=True,
-    ).to_native_fp16()
+    learn = Learner(dls, model, metrics=[accuracy], 
+                loss_func=LabelSmoothingCrossEntropy(), opt_func=opt_func,
+                splitter=custom_splitter, cbs=callbacks, train_bn=True,)
 
+    learn = learn.to_native_fp16()
     learn.unfreeze()
 
-    if lrfinder:  learn.lr_find()
+    if lrfinder:   learn.lr_find()
 
     else:
         batch_cbs = []
         if grad_accumulate > 0:
+            log.info(f"Accumulating gradients for {grad_accumulate} batches")
             batch_cbs.append(GradientAccumulation(grad_accumulate * dls.bs))
         if mixup > 0:
+            log.info("Using MixUp")
             batch_cbs.append(MixUp(mixup))
 
         if sched_type == "one_cycle":
+            log.info(f"One Cycle Annealing; pct_start: {pct_start};")
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
-        elif sched_type == "flat_and_anneal":
+        elif sched_type == "flat_cos":
+            log.info(f"Flat Cos Annealing; pct_start: {pct_start};")
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
 
         learn = learn.to_native_fp32()
@@ -169,4 +156,4 @@ def main(
         sdirs = os.path.join(save_dir, f"{save_name}.pt")
         torch.save(learn.model.state_dict(), sdirs)
         wandb.save(sdirs)
-        log.info(f"saved to {sdirs}")
+        log.info(f"weights saved as {save_name}.pt")
