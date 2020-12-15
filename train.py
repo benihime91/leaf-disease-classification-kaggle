@@ -14,11 +14,8 @@ from src.fast_utils import *
 logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s",
                 datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO,)
 
-logger = logging.getLogger("wandb")
-logger.setLevel(logging.ERROR)
 
 PROJECT = "kaggle-leaf-disease-fastai-runs"
-run = wandb.init(project=PROJECT)
 
 
 @delegates(DataBlock)
@@ -68,6 +65,8 @@ def main(
 ):
     log = logging.getLogger(__name__)
     set_seed(seed, reproducible=True)
+    
+    if not lrfinder: run = wandb.init(project=PROJECT)
 
     idx = generate_random_id()
 
@@ -122,7 +121,9 @@ def main(
         log.info(f"Switching to Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
         opt_func = Adam
 
-    callbacks = [WandbCallback(log_model=False, log_preds=False, seed=seed)]
+    if not lrfinder:
+        callbacks = [WandbCallback(log_model=False, log_preds=False, seed=seed)]
+    else: callbacks = None
 
     learn = Learner(dls, model, metrics=[accuracy], 
                 loss_func=LabelSmoothingCrossEntropy(), opt_func=opt_func,
@@ -131,7 +132,8 @@ def main(
     learn = learn.to_native_fp16()
     learn.unfreeze()
 
-    if lrfinder:   learn.lr_find()
+    if lrfinder:   
+        learn.lr_find()
 
     else:
         batch_cbs = []
