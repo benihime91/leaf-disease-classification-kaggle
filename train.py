@@ -79,7 +79,7 @@ def main(
 
     idx = generate_random_id()
 
-    save_name = f"{encoder}-fold={fold}-{idx}.pt"
+    save_name = f"{encoder}-fold={fold}-{idx}"
     save_dir = os.getcwd()
 
     train_augments = A.Compose(
