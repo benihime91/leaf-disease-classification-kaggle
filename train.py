@@ -132,10 +132,13 @@ def main(
     learn = learn.to_native_fp16()
     learn.unfreeze()
 
-    if lrfinder:   
+    if lrfinder:
+        # run learning rate finder
+        IN_NOTEBOOK = 1
         learn.lr_find()
 
     else:
+        IN_NOTEBOOK = 1
         batch_cbs = []
         if grad_accumulate > 0:
             log.info(f"Accumulating gradients for {grad_accumulate} batches")
