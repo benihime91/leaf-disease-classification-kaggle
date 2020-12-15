@@ -109,28 +109,24 @@ def main(
     dls = get_data(src, ims, curr_fold=fold, bs=bs, item_tfms=item_tfms,batch_tfms=batch_tfms,)
 
     encoder = timm.create_model(encoder, pretrained=True)
+    
     if mish:
-        print("Using Mish activation")
+        print("Using Mish activation...")
         model = TransferLearningModel(encoder, dls.c, cut=cut, act=Mish())
         replace_with_mish(model)
-    else:
-        model = TransferLearningModel(encoder, dls.c, cut=cut)
+    
+    else:   model = TransferLearningModel(encoder, dls.c, cut=cut)
     
     apply_init(model.decoder, nn.init.kaiming_normal_)
 
-    if weights is not None:  
-        model.load_state_dict(torch.load(weights))
+    if weights is not None:  model.load_state_dict(torch.load(weights))
 
     if opt == "adam":
-        print(f"Using Adam Optimizer")
+        print(f"Using Adam Optimizer...")
         opt_func = Adam
     elif opt == "ranger":
-        print(f"Using Ranger Optimizer")
+        print(f"Using Ranger Optimizer...")
         opt_func = ranger
-    else:
-        print(f"Switching to Adam Optimizer")
-        opt_func = Adam
-
 
     learn = Learner(dls, model, metrics=[accuracy], 
                 opt_func=opt_func, loss_func=LabelSmoothingCrossEntropy(), 
@@ -146,12 +142,15 @@ def main(
         plt.savefig('lr_find.png')
 
     else:
+        
         batch_cbs = []
+        
         if grad_accumulate > 0:
             print(f"Accumulating gradients for {grad_accumulate} batches")
             batch_cbs.append(GradientAccumulation(grad_accumulate * dls.bs))
+        
         if mixup > 0:
-            print("Using MixUp")
+            print("Using MixUp...")
             batch_cbs.append(MixUp(mixup))
 
         if sched_type == "one_cycle":
@@ -161,6 +160,7 @@ def main(
             lr/=2
             learn.unfreeze()
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
+        
         elif sched_type == "flat_cos":
             print(f"Using Flat Cos Annealing with pct_start: {pct_start}")
             learn.freeze()
