@@ -31,6 +31,26 @@ def get_data(src_pth: str, im_pth: str, curr_fold: int, bs: int = 64, **kwargs):
     workers = min(8, num_cpus() // n_gpus)
     return cassava.dataloaders(df, bs=bs, num_worker=workers)
 
+@patch
+def plot_lr_find_modified(self:Recorder, suggestions= False,skip_end=5, lr_min=None, lr_steep=None):
+    "Plot the result of an LR Finder test (won't work if you didn't do `learn.lr_find()` before)"
+    lrs    = self.lrs    if skip_end==0 else self.lrs   [:-skip_end]
+    losses = self.losses if skip_end==0 else self.losses[:-skip_end]
+
+    if suggestions:
+        lr_min_index = min(range(len(lrs)), key=lambda i: abs(lrs[i]-lr_min))
+        lr_steep_index = min(range(len(lrs)), key=lambda i: abs(lrs[i]-lr_steep))
+
+    fig, ax = plt.subplots(1,1)
+    ax.plot(lrs, losses)
+    if suggestions:
+        ax.plot(lr_min,L(losses)[lr_min_index],'ro')
+        ax.plot(lr_steep,L(losses)[lr_steep_index],'ro')
+    ax.set_ylabel("Loss")
+    ax.set_xlabel("Learning Rate")
+    ax.set_xscale('log')
+    return fig
+
 
 @call_parse
 def main(
@@ -120,8 +140,10 @@ def main(
         IN_NOTEBOOK = True
         IN_IPYTHON = True
         # run learning rate finder
-        learn.lr_find()
-        learn.recorder.plot_lr_find()
+        res = learn.lr_find()
+        print(res)
+        fig = learn.recorder.plot_lr_find_modified()
+        plt.savefig('lr_find.png')
 
     else:
         batch_cbs = []
