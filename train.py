@@ -8,6 +8,9 @@ import wandb
 from fastai.callback.wandb import *
 from fastai.vision.all import *
 from fastcore.script import *
+from fastprogress import fastprogress
+
+fastprogress.MAX_COLS = 80
 
 from src.fast_utils import *
 
@@ -41,7 +44,6 @@ def get_data(src_pth: str, im_pth: str, curr_fold: int, bs: int = 64, **kwargs):
 @call_parse
 def main(
     mish: Param("use mish activation", store_true),
-    display: Param("print out the mode", store_true),
     lrfinder: Param("Run learning rate finder; don't train", store_true),
     src: Param("path to the stratified dataframe", str) = None,
     ims: Param("path to the image directory", str) = None,
@@ -64,13 +66,9 @@ def main(
 ):
     set_seed(seed, reproducible=True)
 
-    IN_JUPYTER, IN_NOTEBOOK, IN_IPYTHON, IN_COLAB= True, True, True, True
-
-    if not lrfinder: run = wandb.init(project=PROJECT)
-
     idx = generate_random_id()
 
-    save_name = f"{encoder}-fold={fold}-{idx}"
+    save_name = f"{encoder}-fold={fold}-{idx}.pt"
     save_dir = os.getcwd()
 
     train_augments = A.Compose(
@@ -109,10 +107,8 @@ def main(
 
     if weights is not None:  model.load_state_dict(torch.load(weights))
 
-    if display:  print(model)
-
     if opt == "adam":
-        print(f"Using Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
+        print(f"Using Adam Optimizer, lr: {lr}; wd: {wd}; epochs: {epochs}")
         opt_func = Adam
     elif opt == "ranger":
         print(f"Using Ranger Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
@@ -121,18 +117,16 @@ def main(
         print(f"Switching to Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
         opt_func = Adam
 
-    if not lrfinder:
-        callbacks = [WandbCallback(log_model=False, log_preds=False, seed=seed)]
-    else: callbacks = None
 
-    learn = Learner(dls, model, metrics=[accuracy], 
-                loss_func=LabelSmoothingCrossEntropy(), opt_func=opt_func,
-                splitter=custom_splitter, cbs=callbacks, train_bn=True,)
+    learn = Learner(dls, model, metrics=[accuracy], opt_func=opt_func,
+                loss_func=LabelSmoothingCrossEntropy(), splitter=custom_splitter,)
 
     learn = learn.to_native_fp16()
     learn.unfreeze()
 
     if lrfinder:
+        IN_NOTEBOOK = True
+        IN_IPYTHON = True
         # run learning rate finder
         learn.lr_find()
         learn.recorder.plot_lr_find()
@@ -148,14 +142,17 @@ def main(
 
         if sched_type == "one_cycle":
             print(f"One Cycle Annealing; pct_start: {pct_start};")
+            learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
+            lr/=2
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
         elif sched_type == "flat_cos":
             print(f"Flat Cos Annealing; pct_start: {pct_start};")
+            learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
+            lr/=2
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
 
         learn = learn.to_native_fp32()
         
-        sdirs = os.path.join(save_dir, f"{save_name}.pt")
+        sdirs = os.path.join(save_dir, save_name)
         torch.save(learn.model.state_dict(), sdirs)
-        wandb.save(sdirs)
-        print(f"weights saved as {save_name}.pt")
+        print(f"weights saved to {sdirs}.pt")
