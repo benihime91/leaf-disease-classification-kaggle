@@ -95,7 +95,7 @@ def main(
     item_tfms = [AlbumentationsTransform(train_augments, valid_augments)]
     batch_tfms = [Normalize.from_stats(*imagenet_stats)]
 
-    print(f"seed: {seed}; size: {seed}; fold: {fold}; bs: {bs}; base: {encoder}")
+    print(f"seed: {seed}; size: {dims}; fold: {fold}; bs: {bs}; base: {encoder}")
 
     dls = get_data(src, ims, curr_fold=fold, bs=bs, item_tfms=item_tfms,batch_tfms=batch_tfms,)
 
