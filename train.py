@@ -24,7 +24,6 @@ PROJECT = "kaggle-leaf-disease-fastai-runs"
 @delegates(DataBlock)
 def get_data(src_pth: str, im_pth: str, curr_fold: int, bs: int = 64, **kwargs):
     print(src_pth)
-    print(im_pth)
     df = pd.read_csv(src_pth)
     df["filePath"] = [os.path.join(im_pth, df["image_id"][idx]) for idx in range(len(df))]
     df["is_valid"] = [df["kfold"][n] == curr_fold for n in range(len(df))]
@@ -93,7 +92,7 @@ def main(
     item_tfms = [AlbumentationsTransform(train_augments, valid_augments)]
     batch_tfms = [Normalize.from_stats(*imagenet_stats)]
 
-    print(f"seed: {seed}; size: {dims}; fold: {fold}; bs: {bs}; base: {encoder}")
+    print(f"base: {encoder}; lr: {lr}; wd: {wd}; epochs: {epochs}; seed: {seed}; size: {dims}; fold: {fold}; bs: {bs};")
 
     dls = get_data(src, ims, curr_fold=fold, bs=bs, item_tfms=item_tfms,batch_tfms=batch_tfms,)
 
@@ -108,13 +107,13 @@ def main(
     if weights is not None:  model.load_state_dict(torch.load(weights))
 
     if opt == "adam":
-        print(f"Using Adam Optimizer, lr: {lr}; wd: {wd}; epochs: {epochs}")
+        print(f"Using Adam Optimizer")
         opt_func = Adam
     elif opt == "ranger":
-        print(f"Using Ranger Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
+        print(f"Using Ranger Optimizer")
         opt_func = ranger
     else:
-        print(f"Switching to Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
+        print(f"Switching to Adam Optimizer")
         opt_func = Adam
 
 
@@ -141,12 +140,12 @@ def main(
             batch_cbs.append(MixUp(mixup))
 
         if sched_type == "one_cycle":
-            print(f"One Cycle Annealing; pct_start: {pct_start};")
+            print(f"Using One Cycle Annealing with pct_start: {pct_start};")
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
         elif sched_type == "flat_cos":
-            print(f"Flat Cos Annealing; pct_start: {pct_start};")
+            print(f"Using Flat Cos Annealing with pct_start: {pct_start};")
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
