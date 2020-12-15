@@ -20,9 +20,8 @@ PROJECT = "kaggle-leaf-disease-fastai-runs"
 
 @delegates(DataBlock)
 def get_data(src_pth: str, im_pth: str, curr_fold: int, bs: int = 64, **kwargs):
-    log = logging.getLogger(__name__)
-    log.info(src_pth)
-    log.info(im_pth)
+    print(src_pth)
+    print(im_pth)
     df = pd.read_csv(src_pth)
     df["filePath"] = [os.path.join(im_pth, df["image_id"][idx]) for idx in range(len(df))]
     df["is_valid"] = [df["kfold"][n] == curr_fold for n in range(len(df))]
@@ -63,9 +62,10 @@ def main(
     grad_accumulate: Param("gradient accumulation", int) = 0,
     sched_type: Param("LR schedule type (one_cycle, flat_cos)", str) = "one_cycle",
 ):
-    log = logging.getLogger(__name__)
     set_seed(seed, reproducible=True)
-    
+
+    IN_JUPYTER, IN_NOTEBOOK, IN_IPYTHON, IN_COLAB= True, True, True, True
+
     if not lrfinder: run = wandb.init(project=PROJECT)
 
     idx = generate_random_id()
@@ -95,13 +95,13 @@ def main(
     item_tfms = [AlbumentationsTransform(train_augments, valid_augments)]
     batch_tfms = [Normalize.from_stats(*imagenet_stats)]
 
-    log.info(f"seed: {seed}; size: {seed}; fold: {fold}; bs: {bs}; base: {encoder}")
+    print(f"seed: {seed}; size: {seed}; fold: {fold}; bs: {bs}; base: {encoder}")
 
     dls = get_data(src, ims, curr_fold=fold, bs=bs, item_tfms=item_tfms,batch_tfms=batch_tfms,)
 
     encoder = timm.create_model(encoder, pretrained=True)
     if mish:
-        log.info("Using Mish activation")
+        print("Using Mish activation")
         model = TransferLearningModel(encoder, dls.c, cut=cut, act=Mish())
         replace_with_mish(model)
     else:
@@ -112,13 +112,13 @@ def main(
     if display:  print(model)
 
     if opt == "adam":
-        log.info(f"Using Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
+        print(f"Using Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
         opt_func = Adam
     elif opt == "ranger":
-        log.info(f"Using Ranger Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
+        print(f"Using Ranger Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
         opt_func = ranger
     else:
-        log.info(f"Switching to Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
+        print(f"Switching to Adam Optimizer, lr: {lr}, wd: {wd}, epochs: {epochs}")
         opt_func = Adam
 
     if not lrfinder:
@@ -134,24 +134,23 @@ def main(
 
     if lrfinder:
         # run learning rate finder
-        IN_NOTEBOOK = 1
         learn.lr_find()
+        learn.recorder.plot_lr_find()
 
     else:
-        IN_NOTEBOOK = 1
         batch_cbs = []
         if grad_accumulate > 0:
-            log.info(f"Accumulating gradients for {grad_accumulate} batches")
+            print(f"Accumulating gradients for {grad_accumulate} batches")
             batch_cbs.append(GradientAccumulation(grad_accumulate * dls.bs))
         if mixup > 0:
-            log.info("Using MixUp")
+            print("Using MixUp")
             batch_cbs.append(MixUp(mixup))
 
         if sched_type == "one_cycle":
-            log.info(f"One Cycle Annealing; pct_start: {pct_start};")
+            print(f"One Cycle Annealing; pct_start: {pct_start};")
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
         elif sched_type == "flat_cos":
-            log.info(f"Flat Cos Annealing; pct_start: {pct_start};")
+            print(f"Flat Cos Annealing; pct_start: {pct_start};")
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
 
         learn = learn.to_native_fp32()
@@ -159,4 +158,4 @@ def main(
         sdirs = os.path.join(save_dir, f"{save_name}.pt")
         torch.save(learn.model.state_dict(), sdirs)
         wandb.save(sdirs)
-        log.info(f"weights saved as {save_name}.pt")
+        print(f"weights saved as {save_name}.pt")
