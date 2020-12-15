@@ -79,7 +79,7 @@ def main(
 
     idx = generate_random_id()
 
-    save_name = f"{encoder}-fold={fold}-{idx}"
+    save_name = f"{encoder}-fold={fold}-{idx}.pt"
     save_dir = os.getcwd()
 
     train_augments = A.Compose(
@@ -173,4 +173,4 @@ def main(
         
         sdirs = os.path.join(save_dir, save_name)
         torch.save(learn.model.state_dict(), sdirs)
-        print(f"weights saved to {sdirs}.pt")
+        print(f"weights saved to {sdirs}")
