@@ -11,14 +11,13 @@ from fastcore.script import *
 
 from src.fast_utils import *
 
-logger = logging.getLogger("wandb")
-logger.setLevel(logging.ERROR)
-
 logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s",
                 datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO,)
 
 PROJECT = "kaggle-leaf-disease-fastai-runs"
-API_KEY = "a74f67fd5fae293e301ea8b6710ee0241f595a63"
+
+logger = logging.getLogger("wandb")
+logger.setLevel(logging.ERROR)
 
 
 @delegates(DataBlock)
@@ -70,7 +69,6 @@ def main(
     set_seed(seed, reproducible=True)
 
     idx = generate_random_id()
-    wandb.login(key=API_KEY)
     wandb.init(project=PROJECT)
 
     save_name = f"{encoder}-fold={fold}-{idx}"
