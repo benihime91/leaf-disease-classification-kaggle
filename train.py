@@ -143,14 +143,14 @@ def main(
         if sched_type == "one_cycle":
             print(f"Using One Cycle Annealing with pct_start: {pct_start}")
             learn.freeze()
-            learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
+            learn.fit_one_cycle(1, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
             learn.unfreeze()
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
         elif sched_type == "flat_cos":
             print(f"Using Flat Cos Annealing with pct_start: {pct_start};")
             learn.freeze()
-            learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
+            learn.fit_flat_cos(1, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
             learn.unfreeze()
             learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
