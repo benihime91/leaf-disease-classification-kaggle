@@ -1,24 +1,16 @@
-import logging
 import os
 
 import albumentations as A
 import pandas as pd
 import timm
-import wandb
 from fastai.callback.wandb import *
 from fastai.vision.all import *
 from fastcore.script import *
 from fastprogress import fastprogress
 
-fastprogress.MAX_COLS = 80
-
 from src.fast_utils import *
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s",
-                datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO,)
-
-
-PROJECT = "kaggle-leaf-disease-fastai-runs"
+fastprogress.MAX_COLS = 80
 
 
 @delegates(DataBlock)
@@ -148,7 +140,7 @@ def main(
             learn.unfreeze()
             learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
         elif sched_type == "flat_cos":
-            print(f"Using Flat Cos Annealing with pct_start: {pct_start};")
+            print(f"Using Flat Cos Annealing with pct_start: {pct_start}")
             learn.freeze()
             learn.fit_flat_cos(1, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
             lr/=2
