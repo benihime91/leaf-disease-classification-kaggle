@@ -17,38 +17,45 @@ fastprogress.MAX_COLS = 80
 def get_data(src_pth: str, im_pth: str, curr_fold: int, bs: int = 64, **kwargs):
     print(src_pth)
     df = pd.read_csv(src_pth)
-    df["filePath"] = [os.path.join(im_pth, df["image_id"][idx]) for idx in range(len(df))]
+    df["filePath"] = [
+        os.path.join(im_pth, df["image_id"][idx]) for idx in range(len(df))
+    ]
     df["is_valid"] = [df["kfold"][n] == curr_fold for n in range(len(df))]
     df = df.sample(frac=1).reset_index(drop=True, inplace=False)
 
-    cassava = DataBlock(blocks=(ImageBlock, CategoryBlock),
-                    splitter=ColSplitter(col="is_valid"),
-                    get_x=lambda x: x["filePath"],
-                    get_y=lambda x: x["label"],
-                    **kwargs,)
+    cassava = DataBlock(
+        blocks=(ImageBlock, CategoryBlock),
+        splitter=ColSplitter(col="is_valid"),
+        get_x=lambda x: x["filePath"],
+        get_y=lambda x: x["label"],
+        **kwargs,
+    )
 
     n_gpus = num_distrib() or 1
     workers = min(8, num_cpus() // n_gpus)
     return cassava.dataloaders(df, bs=bs, num_worker=workers)
 
+
 @patch
-def plot_lr_find_modified(self:Recorder, suggestions= False,skip_end=5, lr_min=None, lr_steep=None):
+def plot_lr_find_modified(
+    self: Recorder, suggestions=False, skip_end=5, lr_min=None, lr_steep=None
+):
     "Plot the result of an LR Finder test (won't work if you didn't do `learn.lr_find()` before)"
-    lrs    = self.lrs    if skip_end==0 else self.lrs   [:-skip_end]
-    losses = self.losses if skip_end==0 else self.losses[:-skip_end]
+    lrs = self.lrs if skip_end == 0 else self.lrs[:-skip_end]
+    losses = self.losses if skip_end == 0 else self.losses[:-skip_end]
 
     if suggestions:
-        lr_min_index = min(range(len(lrs)), key=lambda i: abs(lrs[i]-lr_min))
-        lr_steep_index = min(range(len(lrs)), key=lambda i: abs(lrs[i]-lr_steep))
+        lr_min_index = min(range(len(lrs)), key=lambda i: abs(lrs[i] - lr_min))
+        lr_steep_index = min(range(len(lrs)), key=lambda i: abs(lrs[i] - lr_steep))
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1, 1)
     ax.plot(lrs, losses)
     if suggestions:
-        ax.plot(lr_min,L(losses)[lr_min_index],'ro')
-        ax.plot(lr_steep,L(losses)[lr_steep_index],'ro')
+        ax.plot(lr_min, L(losses)[lr_min_index], "ro")
+        ax.plot(lr_steep, L(losses)[lr_steep_index], "ro")
     ax.set_ylabel("Loss")
     ax.set_xlabel("Learning Rate")
-    ax.set_xscale('log')
+    ax.set_xscale("log")
     return fig
 
 
@@ -100,26 +107,41 @@ def main(
         ]
     )
 
-    valid_augments = A.Compose([A.Resize(dims, dims, p=1.0),])
-    item_tfms  = [AlbumentationsTransform(train_augments, valid_augments)]
+    valid_augments = A.Compose(
+        [
+            A.Resize(dims, dims, p=1.0),
+        ]
+    )
+    item_tfms = [AlbumentationsTransform(train_augments, valid_augments)]
     batch_tfms = [Normalize.from_stats(*imagenet_stats)]
 
-    print(f"base: {encoder}; lr: {lr}; wd: {wd}; epochs: {epochs}; seed: {seed}; size: {dims}; fold: {fold}; bs: {bs};")
+    print(
+        f"base: {encoder}; lr: {lr}; wd: {wd}; epochs: {epochs}; seed: {seed}; size: {dims}; fold: {fold}; bs: {bs};"
+    )
 
-    dls = get_data(src, ims, curr_fold=fold, bs=bs, item_tfms=item_tfms,batch_tfms=batch_tfms,)
+    dls = get_data(
+        src,
+        ims,
+        curr_fold=fold,
+        bs=bs,
+        item_tfms=item_tfms,
+        batch_tfms=batch_tfms,
+    )
 
     encoder = timm.create_model(encoder, pretrained=True)
-    
+
     if mish:
         print("Using Mish activation...")
         model = TransferLearningModel(encoder, dls.c, cut=cut, act=Mish())
         replace_with_mish(model)
-    
-    else:   model = TransferLearningModel(encoder, dls.c, cut=cut)
-    
+
+    else:
+        model = TransferLearningModel(encoder, dls.c, cut=cut)
+
     apply_init(model.decoder, nn.init.kaiming_normal_)
 
-    if weights is not None:  model.load_state_dict(torch.load(weights))
+    if weights is not None:
+        model.load_state_dict(torch.load(weights))
 
     if opt == "adam":
         print(f"Using Adam Optimizer...")
@@ -128,9 +150,14 @@ def main(
         print(f"Using Ranger Optimizer...")
         opt_func = ranger
 
-    learn = Learner(dls, model, metrics=[accuracy], 
-                opt_func=opt_func, loss_func=LabelSmoothingCrossEntropy(), 
-                splitter=custom_splitter,).to_native_fp16()
+    learn = Learner(
+        dls,
+        model,
+        metrics=[accuracy],
+        opt_func=opt_func,
+        loss_func=LabelSmoothingCrossEntropy(),
+        splitter=custom_splitter,
+    ).to_native_fp16()
 
     if lrfinder:
         IN_NOTEBOOK = True
@@ -139,16 +166,16 @@ def main(
         res = learn.lr_find()
         print(res)
         fig = learn.recorder.plot_lr_find_modified()
-        plt.savefig('lr_find.png')
+        plt.savefig("lr_find.png")
 
     else:
-        
+
         batch_cbs = []
-        
+
         if grad_accumulate > 0:
             print(f"Accumulating gradients for {grad_accumulate} batches")
             batch_cbs.append(GradientAccumulation(grad_accumulate * dls.bs))
-        
+
         if mixup > 0:
             print("Using MixUp...")
             batch_cbs.append(MixUp(mixup))
@@ -156,21 +183,45 @@ def main(
         if sched_type == "one_cycle":
             print(f"Using One Cycle Annealing with pct_start: {pct_start}")
             learn.freeze()
-            learn.fit_one_cycle(1, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
-            lr/=2
+            learn.fit_one_cycle(
+                1,
+                slice(lr / lr_mult, lr),
+                pct_start=0.99,
+                wd=wd,
+                cbs=batch_cbs,
+            )
+            lr /= 2
             learn.unfreeze()
-            learn.fit_one_cycle(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
-        
+            learn.fit_one_cycle(
+                epochs,
+                slice(lr / lr_mult, lr),
+                pct_start=pct_start,
+                wd=wd,
+                cbs=batch_cbs,
+            )
+
         elif sched_type == "flat_cos":
             print(f"Using Flat Cos Annealing with pct_start: {pct_start}")
             learn.freeze()
-            learn.fit_flat_cos(1, slice(lr / lr_mult, lr), pct_start=0.99, wd=wd, cbs=batch_cbs,)
-            lr/=2
+            learn.fit_flat_cos(
+                1,
+                slice(lr / lr_mult, lr),
+                pct_start=0.99,
+                wd=wd,
+                cbs=batch_cbs,
+            )
+            lr /= 2
             learn.unfreeze()
-            learn.fit_flat_cos(epochs, slice(lr / lr_mult, lr), pct_start=pct_start, wd=wd, cbs=batch_cbs,)
+            learn.fit_flat_cos(
+                epochs,
+                slice(lr / lr_mult, lr),
+                pct_start=pct_start,
+                wd=wd,
+                cbs=batch_cbs,
+            )
 
         learn = learn.to_native_fp32()
-        
+
         sdirs = os.path.join(save_dir, save_name)
         torch.save(learn.model.state_dict(), sdirs)
         print(f"weights saved to {sdirs}")
