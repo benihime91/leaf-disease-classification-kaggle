@@ -9,6 +9,8 @@ outputs/
 test_data/
 wandb/
 nbs/wandb/
+nbs/models/
+models
 
 # C extensions
 *.so
