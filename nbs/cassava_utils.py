@@ -96,7 +96,7 @@ def custom_splitter(net): return [params(net.encoder), params(net.decoder)]
 
 
 # ========================================================
-# Layers / Modules 
+# Layers / Modules / Activations
 # ========================================================
 class AdaptiveConcatPool2d(nn.Module):
     "Layer that concats `AdaptiveAvgPool2d` and `AdaptiveMaxPool2d`"
@@ -124,3 +124,17 @@ class TransferLearningModel(nn.Module):
         feats  = self.encoder(xb)
         logits = self.decoder(feats)
         return logits
+    
+class Mish(nn.Module):
+    'mish activation'
+    def __init__(self)  : super().__init__()
+    def forward(self, x): return x *( torch.tanh(F.softplus(x)))
+
+def mod_acts(model, func, activs:list = [nn.ReLU, nn.SiLU]):
+    'recursively replace all the `activs` with `func`'
+    for child_name, child in model.named_children():
+        for act in activs:
+            if isinstance(child, act):
+                setattr(model, child_name, func)
+        else:
+            mod_acts(child, func)
