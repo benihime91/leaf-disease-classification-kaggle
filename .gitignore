@@ -8,7 +8,7 @@ test.ipynb
 outputs/
 test_data/
 wandb/
-
+nbs/wandb/
 
 # C extensions
 *.so
