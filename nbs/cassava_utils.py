@@ -165,9 +165,8 @@ def timm_learner(
     cut: int,
     state: str = None,
     init: bool = True,
-    pretrained: bool = True,
     act: callable = nn.ReLU(inplace=True),
-    modifiers: list[callable] = None,
+    modifiers: Union[callable, List[callable]] = None,
     **kwargs
 ):
     "custom fastai learner using the timm library"
