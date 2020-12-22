@@ -162,7 +162,7 @@ def mod_acts(model, func, activs: list = [nn.ReLU, nn.SiLU]):
 @delegates(Learner)
 def timm_learner(
     dls: DataLoaders,
-    m: str,
+    encoder: nn.Module,
     cut: int,
     state: str = None,
     init: bool = True,
@@ -173,7 +173,7 @@ def timm_learner(
 ):
     "custom fastai learner using the timm library"
     c = dls.c
-    encoder = timm.create_model(m, pretrained=pretrained)
+
     model = TransferLearningModel(
         encoder,
         num_classes=c,
