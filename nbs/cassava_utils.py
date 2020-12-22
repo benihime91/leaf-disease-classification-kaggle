@@ -6,7 +6,6 @@ import torch
 from torch import nn
 
 from fastai.vision.all import *
-import timm
 
 
 # Label map for the cassava categories
