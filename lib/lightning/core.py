@@ -3,7 +3,7 @@
 __all__ = ['params', 'CassavaLightningDataModule', 'LightningCassava']
 
 # Cell
-from typing import Optional
+from typing import Optional, Callable
 import albumentations as A
 import pandas as pd
 
@@ -35,8 +35,8 @@ class CassavaLightningDataModule(pl.LightningDataModule):
         self.train_augs = train_augs
         self.valid_augs = valid_augs
 
-        self.train_df = self.train_df.reset_index(inplace=False)
-        self.valid_df = self.valid_df.reset_index(inplace=False)
+        self.train_df = self.train_df.reset_index(inplace=False, drop=True)
+        self.valid_df = self.valid_df.reset_index(inplace=False, drop=True)
 
         self.bs, self.workers = bs, num_workers
 
@@ -60,15 +60,15 @@ class CassavaLightningDataModule(pl.LightningDataModule):
 class LightningCassava(pl.LightningModule):
     "LightningModule wrapper for `TransferLearningModel`"
     def __init__(self, model: TransferLearningModel = None,
-                 opt_func: callable = None,
+                 opt_func: Callable = None,
                  lr: float = 1e-03,
                  lr_mult: int = 100,
                  step_after: Optional[str] = None,
                  frequency: int = 1,
                  metric_to_track: Optional[str] = None,
-                 scheduler: Optional[callable] = None,
-                 loss_func: callable = LabelSmoothingCrossEntropy(),
-                 mixmethod: Optional[callable] = partial(Mixup, alpha=0.5)):
+                 scheduler: Optional[Callable] = None,
+                 loss_func: Callable = LabelSmoothingCrossEntropy(),
+                 mixmethod: Optional[Callable] = None):
 
         super().__init__()
         self.model = model
@@ -119,13 +119,17 @@ class LightningCassava(pl.LightningModule):
         opt = self.hparams.opt_func(param_list)
 
         if self.hparams.scheduler is not None:
-            sch = self.hparams.scheduler(opt)
-            sch = {
-                'scheduler': sch,
-                'monitor': self.hparams.metric_to_track,
-                'interval': self.hparams.step_after,
-                'frequency': self.hparams.frequency
-            }
+            try:
+                # for OneCycleLR set the LR so we can use LrFinder
+                lr_list = [self.hparams.lr/self.hparams.lr_mult, self.hparams.lr]
+                sch = self.hparams.scheduler(opt, max_lr=lr_list)
+            except: sch = self.hparams.scheduler(opt)
+
+            # convert scheduler to lightning format
+            sch = {'scheduler': sch,
+                   'monitor'  : self.hparams.metric_to_track,
+                   'interval' : self.hparams.step_after,
+                   'frequency': self.hparams.frequency}
 
             return [opt], [sch]
 
