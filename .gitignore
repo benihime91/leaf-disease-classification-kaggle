@@ -10,6 +10,8 @@ test_data/
 wandb/
 nbs/wandb/
 nbs/models/
+nbs/lightning_logs/
+lightning_logs/
 models
 
 # C extensions

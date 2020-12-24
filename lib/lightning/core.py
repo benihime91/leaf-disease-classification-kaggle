@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader, Dataset
 
 import pytorch_lightning as pl
 from pytorch_lightning.metrics.functional.classification import accuracy
+from pytorch_lightning import _logger as log
 
 from ..core import *
 from ..layers import *
@@ -28,17 +29,21 @@ def params(m):
 class CassavaLightningDataModule(pl.LightningDataModule):
     "lightning-datamodule for cassave leaf disease classification"
     def __init__(self, df_path:str, im_dir:str, curr_fold: int,
-                 train_augs: A.Compose, valid_augs: A.Compose, bs: int = 64, num_workers: int=0):
+                 train_augs: A.Compose, valid_augs: A.Compose, bs: int = 64,
+                 num_workers: int=0):
+
         self.df = load_dataset(df_path, im_dir, curr_fold, True)
+        self.curr_fold = curr_fold
+        self.train_augs, self.valid_augs = train_augs, valid_augs
+        self.bs, self.workers = bs, num_workers
+
+    def prepare_data(self):
+        log.info(f'Generating data for fold: {self.curr_fold}')
         self.train_df: pd.DataFrame = self.df.loc[self.df['is_valid'] == False]
         self.valid_df: pd.DataFrame = self.df.loc[self.df['is_valid'] == True]
-        self.train_augs = train_augs
-        self.valid_augs = valid_augs
 
         self.train_df = self.train_df.reset_index(inplace=False, drop=True)
         self.valid_df = self.valid_df.reset_index(inplace=False, drop=True)
-
-        self.bs, self.workers = bs, num_workers
 
     def setup(self, stage=None):
         if stage == "fit" or stage is None:
@@ -72,11 +77,15 @@ class LightningCassava(pl.LightningModule):
 
         super().__init__()
         self.model = model
-        self.mix_fn = mixmethod
-        self.save_hyperparameters()
 
-    def forward(self, xb):
-        return self.model(xb)
+        if isinstance(mixmethod, partial): self.mix_fn = mixmethod()
+        else                             : self.mix_fn = mixmethod
+
+        self.save_hyperparameters()
+        log.info(f'Using {mixmethod}')
+        log.info(f'Uses {loss_func}')
+
+    def forward(self, xb):  return self.model(xb)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -91,6 +100,7 @@ class LightningCassava(pl.LightningModule):
             loss = self.hparams.loss_func(y_hat, y)
 
         self.log("train_loss", loss, prog_bar=False)
+        self.log("epoch_loss", loss, prog_bar=True, logger=False, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -101,9 +111,9 @@ class LightningCassava(pl.LightningModule):
         preds = torch.argmax(y_hat, dim=1)
         acc = accuracy(preds, y)
 
-        logs = {'valid_loss': loss, 'accuracy': acc}
+        metrics = {'valid_loss': loss, 'accuracy': acc}
         self.log_dict(metrics, prog_bar=True, logger=True,)
-        return logs
+        return metrics
 
     def test_step(self, batch, batch_idx):
         metrics = self.validation_step(batch, batch_idx)
@@ -122,7 +132,7 @@ class LightningCassava(pl.LightningModule):
             try:
                 # for OneCycleLR set the LR so we can use LrFinder
                 lr_list = [self.hparams.lr/self.hparams.lr_mult, self.hparams.lr]
-                sch = self.hparams.scheduler(opt, max_lr=lr_list)
+                sch = self.hparams.scheduler(opt, max_lr=lr_list, steps_per_epoch=len(self.train_dataloader()))
             except: sch = self.hparams.scheduler(opt)
 
             # convert scheduler to lightning format
@@ -142,7 +152,9 @@ class LightningCassava(pl.LightningModule):
     def save_model_weights(self, path:str):
         state = self.model.state_dict()
         torch.save(state, state)
+        log.info(f'weights saved to {path}')
 
     def load_model_weights(self, path:str):
         state_dict = torch.load(path)
         self.model.load_state_dict(state_dict)
+        log.info(f'weights loaded from {path}')
