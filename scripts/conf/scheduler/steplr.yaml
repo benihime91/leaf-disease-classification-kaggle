@@ -1,9 +1,0 @@
-scheduler:
-  class_name: torch.optim.lr_scheduler.StepLR
-  params:
-    step_size: 2.5
-    gamma: 0.1
-    last_epoch: -1
-  interval: epoch
-  frequency: 1
-  monitor: null

@@ -1,8 +1,0 @@
-logger:
-  api: a74f67fd5fae293e301ea8b6710ee0241f595a63
-  project: kaggle-leaf-disease
-  run_name: ${training.job_name}
-  class_name: pytorch_lightning.loggers.WandbLogger
-  params:
-    project: ${logger.project}
-    name: ${logger.run_name}

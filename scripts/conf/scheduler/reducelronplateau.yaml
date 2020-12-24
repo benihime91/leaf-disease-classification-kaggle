@@ -1,9 +1,0 @@
-scheduler:
-  class_name: torch.optim.lr_scheduler.ReduceLROnPlateau
-  params:
-    mode: min
-    factor: 0.1
-    patience: 2
-  interval: epoch
-  monitor: ${training.metric}
-  frequency: 1
