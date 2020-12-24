@@ -3,6 +3,10 @@
 __all__ = ['params', 'CassavaLightningDataModule', 'LightningCassava']
 
 # Cell
+from typing import Optional
+import albumentations as A
+import pandas as pd
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -11,13 +15,9 @@ from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
 from pytorch_lightning.metrics.functional.classification import accuracy
 
-import albumentations as A
-import pandas as pd
-
 from ..core import *
 from ..layers import *
 from ..mixmethods import *
-from typing import Optional
 
 # Cell
 def params(m):
@@ -84,7 +84,7 @@ class LightningCassava(pl.LightningModule):
         if self.mix_fn is not None:
             x_mix = self.mix_fn(x, y, self.model)
             y_hat = self(x_mix)
-            loss = mixmethod.loss(self.hparams.loss_func, y_hat)
+            loss = self.mix_fn.loss(self.hparams.loss_func, y_hat)
 
         else:
             y_hat = self(x)
