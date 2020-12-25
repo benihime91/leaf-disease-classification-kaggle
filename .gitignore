@@ -19,6 +19,9 @@ nbs/kaggle-leaf-disease-fastai-runs
 
 #lightning checkpoints
 *.ckpt
+# torch savepoints
+*.pt
+*.pth
 
 # C extensions
 *.so
