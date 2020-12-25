@@ -66,11 +66,12 @@ class Cutmix():
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
-        cut_w = torch.round(W * cut_rat).type(torch.long)
-        cut_h = torch.round(H * cut_rat).type(torch.long)
+        cut_w = torch.round(W * cut_rat).type(torch.long).to(self.device)
+        cut_h = torch.round(H * cut_rat).type(torch.long).to(self.device)
+
         # uniform
-        cx = torch.randint(0, W, (1,))
-        cy = torch.randint(0, H, (1,))
+        cx = torch.randint(0, W, (1,), device=self.device)
+        cy = torch.randint(0, H, (1,), device=self.device)
         x1 = torch.clamp(cx - cut_w // 2, 0, W)
         y1 = torch.clamp(cy - cut_h // 2, 0, H)
         x2 = torch.clamp(cx + cut_w // 2, 0, W)
@@ -109,11 +110,12 @@ class SnapMix():
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
-        cut_w = torch.round(W * cut_rat).type(torch.long)
-        cut_h = torch.round(H * cut_rat).type(torch.long)
+        cut_w = torch.round(W * cut_rat).type(torch.long).to(self.device)
+        cut_h = torch.round(H * cut_rat).type(torch.long).to(self.device)
+
         # uniform
-        cx = torch.randint(0, W, (1,))
-        cy = torch.randint(0, H, (1,))
+        cx = torch.randint(0, W, (1,), device=self.device)
+        cy = torch.randint(0, H, (1,), device=self.device)
         x1 = torch.clamp(cx - cut_w // 2, 0, W)
         y1 = torch.clamp(cy - cut_h // 2, 0, H)
         x2 = torch.clamp(cx + cut_w // 2, 0, W)
