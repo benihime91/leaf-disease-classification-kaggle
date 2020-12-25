@@ -123,13 +123,13 @@ class SnapMix():
         return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
 
     @torch.no_grad()
-    def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: TransferLearningModel):
+    def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: BasicTransferLearningModel):
 
         bs = input.size(0)
 
         fms  = model.encoder(input)
 
-        clsw = model.snapmix_classifier
+        clsw = model.fc
 
         weight = clsw.weight.data
 
@@ -164,7 +164,7 @@ class SnapMix():
 
         return outmaps, clslogit
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
+    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:BasicTransferLearningModel=None):
         bs, _, H, W = xb.size()
 
         self.img_size = (H,W)

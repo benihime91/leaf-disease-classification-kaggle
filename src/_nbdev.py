@@ -26,7 +26,8 @@ index = {"idx2lbl": "00_core.ipynb",
          "num_features_model": "02_layers.ipynb",
          "create_head": "02_layers.ipynb",
          "TransferLearningModel": "02_layers.ipynb",
-         "replace_activs": "02_layers.ipynb"}
+         "replace_activs": "02_layers.ipynb",
+         "BasicTransferLearningModel": "02_layers.ipynb"}
 
 modules = ["core.py",
            "lightning/core.py",
