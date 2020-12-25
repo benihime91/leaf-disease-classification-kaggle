@@ -134,4 +134,6 @@ class BasicTransferLearningModel(nn.Module):
         return self.encoder_name
 
     def forward(self, xb):
-        return self.fc(self.encoder(xb))
+        fmps = self.encoder(xb)
+        x = self.pool(fmps).view(fmps.size(0), -1)
+        return self.fc(x)
