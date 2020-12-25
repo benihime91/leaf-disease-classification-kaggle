@@ -200,13 +200,14 @@ class LightningCassava(pl.LightningModule):
 class WandbImageClassificationCallback(pl.Callback):
     """ Custom callback to add some extra functionalites to the wandb logger """
 
-    def __init__(self, num_log_train_batchs: int = 1):
+    def __init__(self, dm: CassavaLightningDataModule, num_log_train_batchs: int = 1):
         # class names for the confusion matrix
         self.class_names = list(idx2lbl.values())
 
         # counter to log training batch images
         self.num_batch = 0
         self.counter   = num_log_train_batchs - 1
+        self.dm = dm
 
     def on_train_start(self, trainer, pl_module: LightningCassava):
         # log model to the wandb experiment
@@ -233,8 +234,8 @@ class WandbImageClassificationCallback(pl.Callback):
 
         config_defaults['mixmethod']     = mm
 
-        train_tfms = list(dm.train_augs.transforms)
-        valid_tfms = list(dm.valid_augs.transforms)
+        train_tfms = list(self.dm.train_augs.transforms)
+        valid_tfms = list(self.dm.valid_augs.transforms)
 
         config_defaults['train_tfms'] = train_tfms
         config_defaults['valid_tfms'] = valid_tfms
