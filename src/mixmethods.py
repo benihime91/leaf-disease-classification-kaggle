@@ -127,10 +127,10 @@ class SnapMix():
 
         fms  = model.encoder(input)
 
-        try   : clsw = model.fc[-1]
-        except: clsw = model.fc
+        clsw = model.snapmix_classifier
 
         weight = clsw.weight.data
+
         try   : bias = clsw.bias.data
         except: bias = None
 

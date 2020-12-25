@@ -78,12 +78,19 @@ class TransferLearningModel(nn.Module):
             **kwargs: arguments for `create_head`
         """
         super(TransferLearningModel, self).__init__()
-        self.orig_encoder = encoder
+
+        encoder_orig = encoder
+
+        try   : n_features = encoder_orig.fc.in_features
+        except: n_features = encoder_orig.classifier.in_features
 
         self.encoder = cut_model(encoder, cut)
         feats = num_features_model(self.encoder, in_chs=3) * 2
         self.c = c
         self.fc = create_head(feats, n_out=c, **kwargs)
+
+        self.snapmix_classifier = nn.Linear(n_features, out_features=c)
+        self.orig_encoder = encoder_orig
 
     @property
     def encoder_class_name(self):
