@@ -102,11 +102,124 @@ class Cutmix():
 # Cell
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
-    def __init__(self, img_size:tuple):
-        self.img_size = img_size
+    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0):
+        self.device = None
+        self.distrib = Beta(tensor(alpha), tensor(alpha))
+        self.conf_prob = conf_prob
+
+    def rand_bbox(self, W, H, lam):
+        cut_rat = torch.sqrt(1. - lam)
+        cut_w = torch.round(W * cut_rat).type(torch.long)
+        cut_h = torch.round(H * cut_rat).type(torch.long)
+        # uniform
+        cx = torch.randint(0, W, (1,))
+        cy = torch.randint(0, H, (1,))
+        x1 = torch.clamp(cx - cut_w // 2, 0, W)
+        y1 = torch.clamp(cy - cut_h // 2, 0, H)
+        x2 = torch.clamp(cx + cut_w // 2, 0, W)
+        y2 = torch.clamp(cy + cut_h // 2, 0, H)
+        return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
 
     @torch.no_grad()
-    def get_spm(self, input, target, model: TransferLearningModel):
+    def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: TransferLearningModel):
+
         bs = input.size(0)
+
         fms  = model.encoder(input)
-        clsw = model.fc[-1]
+
+        try   : clsw = model.fc[-1]
+        except: clsw = model.fc
+
+        weight = clsw.weight.data
+        try   : bias = clsw.bias.data
+        except: bias = None
+
+        weight = weight.view(weight.size(0),weight.size(1),1,1)
+
+        fms      = F.relu(fms)
+        poolfea  = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
+        clslogit = F.softmax(clsw.forward(poolfea))
+
+        logitlist = []
+        for i in range(bs):  logitlist.append(clslogit[i,target[i]])
+
+        clslogit = torch.stack(logitlist)
+        out = F.conv2d(fms, weight, bias=bias)
+
+        outmaps = []
+        for i in range(bs):
+            evimap = out[i,target[i]]
+            outmaps.append(evimap)
+
+        outmaps = torch.stack(outmaps)
+        outmaps = outmaps.view(outmaps.size(0),1,outmaps.size(1),outmaps.size(2))
+        outmaps = F.interpolate(outmaps, self.img_size, mode='bilinear', align_corners=False)
+        outmaps = outmaps.squeeze()
+
+        for i in range(bs):
+            outmaps[i] -= outmaps[i].min()
+            outmaps[i] /= outmaps[i].sum()
+
+        return outmaps, clslogit
+
+    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
+        bs, _, H, W = xb.size()
+
+        self.img_size = (H,W)
+
+        if self.device is None: self.device = xb.device
+
+        r = np.random.rand(1)
+
+        lam_a = torch.ones(xb.size(0), device=self.device)
+        lam_b = 1 - lam_a
+
+        self.yb  = yb
+        self.yb1 = yb.clone()
+
+        rand_index = torch.randperm(bs, device=self.device)
+
+        if r < self.conf_prob:
+            wfmaps,_  = self.get_spm(xb, yb, model)
+            self.lam  = self.distrib.sample().to(self.device)
+            self.lam1 = self.distrib.sample().to(self.device)
+
+            rand_index = torch.randperm(bs, device=self.device)
+            wfmaps_b = wfmaps[rand_index,:,:]
+            self.yb1 = self.yb[rand_index]
+
+            same_label = self.yb == self.yb1
+
+            bbx1, bby1, bbx2, bby2 = self.rand_bbox(W, H, self.lam)
+            bbx1_1, bby1_1, bbx2_1, bby2_1 = self.rand_bbox(W, H, self.lam1)
+
+            area = (bby2-bby1)*(bbx2-bbx1)
+            area1 = (bby2_1-bby1_1)*(bbx2_1-bbx1_1)
+
+            if  area1 > 0 and  area>0:
+                ncont = xb[rand_index, :, bbx1_1:bbx2_1, bby1_1:bby2_1].clone()
+                ncont = F.interpolate(ncont, size=(bbx2-bbx1,bby2-bby1), mode='bilinear', align_corners=True)
+                xb[:, :, bbx1:bbx2, bby1:bby2] = ncont
+
+                self.lam_a = 1 - wfmaps[:,bbx1:bbx2,bby1:bby2].sum(2).sum(1)/(wfmaps.sum(2).sum(1)+1e-8)
+                self.lam_b = wfmaps_b[:,bbx1_1:bbx2_1,bby1_1:bby2_1].sum(2).sum(1)/(wfmaps_b.sum(2).sum(1)+1e-8)
+
+                tmp = lam_a.clone()
+
+                lam_a[same_label] += lam_b[same_label]
+                lam_b[same_label] += tmp[same_label]
+
+                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (xb.size()[-1] * xb.size()[-2]))
+                lam_a[torch.isnan(lam_a)] = lam
+                lam_b[torch.isnan(lam_b)] = 1-lam
+
+                self.lam_a = lam_a.to(self.device)
+                self.lam_b = lam_b.to(self.device)
+
+        return xb
+
+    def loss(self, lf, pred, *args, **kwargs):
+        loss_a = lf(pred, self.yb)
+        loss_b = lf(pred, self.yb1)
+        loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+        return loss

@@ -52,7 +52,7 @@ class CassavaLightningDataModule(pl.LightningDataModule):
             self.train_ds = ImageClassificationFromDf(self.train_df, self.train_augs)
             self.valid_ds = ImageClassificationFromDf(self.valid_df, self.valid_augs)
         if stage == "test" or stage is None:
-            self.test_ds = ImageClassificationFromDf(self.valid_df, self.valid_augs)
+            self.test_ds  = ImageClassificationFromDf(self.valid_df, self.valid_augs)
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, shuffle=True, batch_size=self.bs, num_workers=self.workers)
@@ -118,8 +118,8 @@ class LightningCassava(pl.LightningModule):
 
         train_acc = accuracy(torch.argmax(y_hat, dim=1), y)
 
-        self.log('train/loss', loss)
-        self.log('train/acc',  train_acc)
+        self.log('train/loss', loss, on_epoch=True)
+        self.log('train/acc',  train_acc, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -186,7 +186,7 @@ class LightningCassava(pl.LightningModule):
 
     def save_model_weights(self, path:str):
         state = self.model.state_dict()
-        torch.save(state, state)
+        torch.save(state, path)
         log.info(f'weights saved to {path}')
 
     def load_model_weights(self, path:str):
