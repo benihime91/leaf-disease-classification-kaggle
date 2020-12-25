@@ -35,6 +35,7 @@ class CassavaLightningDataModule(pl.LightningDataModule):
                  train_augs: A.Compose, valid_augs: A.Compose, bs: int = 64,
                  num_workers: int=0):
 
+        super().__init__()
         self.df = load_dataset(df_path, im_dir, curr_fold, True)
         self.curr_fold = curr_fold
         self.train_augs, self.valid_augs = train_augs, valid_augs
