@@ -17,6 +17,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.metrics.functional.classification import accuracy
 from pytorch_lightning import _logger as log
+from functools import partial
 
 from ..core import *
 from ..layers import *
