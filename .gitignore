@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.DS_Store
 .DS_Store
+
+# custom files not to track
 test.ipynb
 outputs/
 test_data/
@@ -13,6 +15,10 @@ nbs/models/
 nbs/lightning_logs/
 lightning_logs/
 models
+nbs/kaggle-leaf-disease-fastai-runs
+
+#lightning checkpoints
+*.ckpt
 
 # C extensions
 *.so

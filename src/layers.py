@@ -78,12 +78,19 @@ class TransferLearningModel(nn.Module):
             **kwargs: arguments for `create_head`
         """
         super(TransferLearningModel, self).__init__()
+        self.orig_encoder = encoder
+
         self.encoder = cut_model(encoder, cut)
         feats = num_features_model(self.encoder, in_chs=3) * 2
         self.c = c
         self.fc = create_head(feats, n_out=c, **kwargs)
 
-    def forward(self, xb): return self.fc(self.encoder(xb))
+    @property
+    def encoder_class_name(self):
+        return self.orig_encoder.__class__.__name__
+
+    def forward(self, xb):
+        return self.fc(self.encoder(xb))
 
 # Cell
 def replace_activs(model, func, activs: list = [nn.ReLU, nn.SiLU]):

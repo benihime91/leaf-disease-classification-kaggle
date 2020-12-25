@@ -11,6 +11,9 @@ from torch.nn import Module
 from torch import tensor
 from functools import partial
 
+from .core import *
+from .layers import *
+
 # Cell
 # from : https://github.com/fastai/fastai/blob/493023513ddd5157647bd10e9cebbbbdc043474c/fastai/layers.py#L582
 class NoneReduce():
@@ -99,4 +102,11 @@ class Cutmix():
 # Cell
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
-    pass
+    def __init__(self, img_size:tuple):
+        self.img_size = img_size
+
+    @torch.no_grad()
+    def get_spm(self, input, target, model: TransferLearningModel):
+        bs = input.size(0)
+        fms  = model.encoder(input)
+        clsw = model.fc[-1]

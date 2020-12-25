@@ -12,6 +12,7 @@ index = {"idx2lbl": "00_core.ipynb",
          "params": "00a_lightning.core.ipynb",
          "CassavaLightningDataModule": "00a_lightning.core.ipynb",
          "LightningCassava": "00a_lightning.core.ipynb",
+         "WandbImageClassificationCallback": "00a_lightning.core.ipynb",
          "AlbumentationsTransform": "00b_fastai.core.ipynb",
          "timm_learner": "00b_fastai.core.ipynb",
          "timm_splitter": "00b_fastai.core.ipynb",
@@ -33,8 +34,8 @@ modules = ["core.py",
            "mixmethods.py",
            "layers.py"]
 
-doc_url = "https://fastai.github.io/lib/"
+doc_url = "https://fastai.github.io/src/"
 
-git_url = "https://github.com/fastai/lib/tree/master/"
+git_url = "https://github.com/fastai/src/tree/master/"
 
 def custom_doc_links(name): return None
