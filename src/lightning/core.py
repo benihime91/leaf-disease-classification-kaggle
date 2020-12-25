@@ -208,8 +208,6 @@ class WandbImageClassificationCallback(pl.Callback):
         self.num_batch = 0
         self.counter   = num_log_train_batchs - 1
 
-        self.dm = dm
-
     def on_train_start(self, trainer, pl_module: LightningCassava):
         # log model to the wandb experiment
         wandb.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
