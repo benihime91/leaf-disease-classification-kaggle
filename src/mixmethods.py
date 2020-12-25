@@ -174,6 +174,9 @@ class SnapMix():
         lam_a = torch.ones(xb.size(0), device=self.device)
         lam_b = 1 - lam_a
 
+        self.lam1 = lam_a
+        self.lam2 = lam_b
+
         self.yb  = yb
         self.yb1 = yb.clone()
 
@@ -193,7 +196,7 @@ class SnapMix():
             bbx1, bby1, bbx2, bby2 = self.rand_bbox(W, H, self.lam)
             bbx1_1, bby1_1, bbx2_1, bby2_1 = self.rand_bbox(W, H, self.lam1)
 
-            area = (bby2-bby1)*(bbx2-bbx1)
+            area  = (bby2-bby1)*(bbx2-bbx1)
             area1 = (bby2_1-bby1_1)*(bbx2_1-bbx1_1)
 
             if  area1 > 0 and  area>0:
@@ -213,13 +216,12 @@ class SnapMix():
                 lam_a[torch.isnan(lam_a)] = lam
                 lam_b[torch.isnan(lam_b)] = 1-lam
 
-                self.lam_a = lam_a.to(self.device)
-                self.lam_b = lam_b.to(self.device)
-
+        self.yb1, self.yb2 = self.yb, self.yb1
+        self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
         return xb
 
     def loss(self, lf, pred, *args, **kwargs):
-        loss_a = lf(pred, self.yb)
-        loss_b = lf(pred, self.yb1)
+        loss_a = lf(pred, self.yb1)
+        loss_b = lf(pred, self.yb2)
         loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
         return loss
