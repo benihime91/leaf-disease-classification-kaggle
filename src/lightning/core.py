@@ -214,7 +214,7 @@ class WandbImageClassificationCallback(pl.Callback):
 
         # counter to log training batch images
         self.dm = dm
-        self.num_bs = bs
+        self.num_bs = num_batches
         self.curr_epoch = 0
 
     def on_fit_start(self, trainer, pl_module):
