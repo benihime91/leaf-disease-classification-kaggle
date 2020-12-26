@@ -100,6 +100,7 @@ class LightningCassava(pl.LightningModule):
 
         self.val_labels_list = []
         self.val_preds_list  = []
+        self.one_batch_of_image = None
 
     def forward(self, xb):
         return self.model(xb)
@@ -110,11 +111,11 @@ class LightningCassava(pl.LightningModule):
         if self.mix_fn is not None:
             x = self.mix_fn(x, y, self.model)
             y_hat = self(x)
-            loss = self.mix_fn.loss(self.hparams.loss_func, y_hat)
+            loss  = self.mix_fn.loss(self.hparams.loss_func, y_hat)
 
         else:
             y_hat = self(x)
-            loss = self.hparams.loss_func(y_hat, y)
+            loss  = self.hparams.loss_func(y_hat, y)
 
         self.one_batch_of_image = x
 
@@ -210,7 +211,7 @@ class WandbImageClassificationCallback(pl.Callback):
 
     def __init__(self, dm: CassavaLightningDataModule, num_batches:int = 8):
         # class names for the confusion matrix
-        self.class_names = list(idx2lbl.values())
+        self.class_names = list(conf_mat_idx2lbl.values())
 
         # counter to log training batch images
         self.dm = dm
@@ -252,13 +253,18 @@ class WandbImageClassificationCallback(pl.Callback):
         config_defaults['valid_tfms'] = valid_tfms
         config_defaults['callbacks']  = [cb.__class__.__name__ for cb in trainer.callbacks]
 
-        pl_module.logger.log_hyperparams(config_defaults)
+        self.config_defaults = config_defaults
+        pl_module.logger.log_hyperparams(self.config_defaults)
 
-    def on_train_epoch_start(self, trainer, pl_module, *args, **kwargs):
-        ims, _ = next(iter(self.dm.train_dataloader()))
-        one_batch = ims[:self.num_bs]
-        train_ims = one_batch.data.to('cpu')
-        trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]})
+    def on_train_epoch_end(self, trainer, pl_module, *args, **kwargs):
+        if pl_module.one_batch_of_image is None:
+            log.info(f"{self.config_defaults['mixmethod']} samples not available . Skipping --->")
+            pass
+
+        else:
+            one_batch = pl_module.one_batch_of_image[:self.num_bs]
+            train_ims = one_batch.data.to('cpu')
+            trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]})
 
     def on_epoch_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         pl_module.val_labels_list = []

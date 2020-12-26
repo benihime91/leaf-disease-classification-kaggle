@@ -3,6 +3,7 @@
 __all__ = ["index", "modules", "custom_doc_links", "git_url"]
 
 index = {"idx2lbl": "00_core.ipynb",
+         "conf_mat_idx2lbl": "00_core.ipynb",
          "seed_everything": "00_core.ipynb",
          "generate_random_id": "00_core.ipynb",
          "load_dataset": "00_core.ipynb",
