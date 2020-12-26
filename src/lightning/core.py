@@ -149,10 +149,16 @@ class LightningCassava(pl.LightningModule):
 
     def configure_optimizers(self):
         ps = self.param_list
-        param_list = [
-            {'params': ps[0], 'lr': self.hparams.lr/self.hparams.lr_mult},
-            {'params': ps[1], 'lr': self.hparams.lr}
-        ]
+
+        try  :
+            param_list = [{'params': ps[0], 'lr': self.hparams.lr/self.hparams.lr_mult},
+                          {'params': ps[1], 'lr': self.hparams.lr},
+                          {'params': ps[2], 'lr': self.hparams.lr}]
+
+        except:
+            param_list = [{'params': ps[0], 'lr': self.hparams.lr/self.hparams.lr_mult},
+                          {'params': ps[1], 'lr': self.hparams.lr}]
+
         opt_func = self.hparams.opt_func
 
         try   : log.info(f'Using {opt_func}')
@@ -184,7 +190,9 @@ class LightningCassava(pl.LightningModule):
 
     @property
     def param_list(self):
-        return [params(self.model.encoder), params(self.model.fc)]
+        try   : param_list = [params(self.model.encoder), params(self.model.fc), params(self.model.mcls)]
+        except: param_list = [params(self.model.encoder), params(self.model.fc)]
+        return param_list
 
     def save_model_weights(self, path:str):
         state = self.model.state_dict()

@@ -103,10 +103,11 @@ class Cutmix():
 # Cell
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
-    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0):
+    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, mid_level:bool = True):
         self.device = None
         self.distrib = Beta(tensor(alpha), tensor(alpha))
         self.conf_prob = conf_prob
+        self.mid_level = mid_level
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
@@ -123,7 +124,7 @@ class SnapMix():
         return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
 
     @torch.no_grad()
-    def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: BasicTransferLearningModel):
+    def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: SnapMixTransferLearningModel):
 
         bs = input.size(0)
 
@@ -164,7 +165,7 @@ class SnapMix():
 
         return outmaps, clslogit
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:BasicTransferLearningModel=None):
+    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:SnapMixTransferLearningModel=None):
         bs, _, H, W = xb.size()
 
         self.img_size = (H,W)
@@ -220,10 +221,24 @@ class SnapMix():
 
         self.yb1, self.yb2 = self.yb, self.yb1
         self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
-        return xb
+
+        self.model, self.xb = model, xb
+        return self.xb
+
+    def generate_mid_level_output(self):
+        assert self.mid_level
+        mlogits = self.model.mid_forward(self.xb)
+        return mlogits
+
 
     def loss(self, lf, pred, *args, **kwargs):
         loss_a = lf(pred, self.yb1)
         loss_b = lf(pred, self.yb2)
         loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+
+        if self.mid_level:
+            mlogits = self.generate_mid_level_output()
+            loss_ma = lf(pred, self.yb1)
+            loss_mb = lf(pred, self.yb2)
+            loss   += torch.mean(loss_ma* self.lam_a + loss_mb* self.lam_b)
         return loss
