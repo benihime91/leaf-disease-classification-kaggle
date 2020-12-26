@@ -208,19 +208,19 @@ class LightningCassava(pl.LightningModule):
 class WandbImageClassificationCallback(pl.Callback):
     """ Custom callback to add some extra functionalites to the wandb logger """
 
-    def __init__(self, dm: CassavaLightningDataModule, num_log_train_batchs: int = 1):
+    def __init__(self, dm: CassavaLightningDataModule, num_batches:int = 8):
         # class names for the confusion matrix
         self.class_names = list(idx2lbl.values())
 
         # counter to log training batch images
-        self.num_batch = 0
-        self.counter   = num_log_train_batchs - 1
         self.dm = dm
+        self.num_bs = bs
+        self.curr_epoch = 0
 
     def on_fit_start(self, trainer, pl_module):
         try:
             # log model to the wandb experiment
-            wandb.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
+            trainer.logger.experiment.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
         except:
             log.info("Skipping wandb.watch --->")
 
@@ -237,7 +237,6 @@ class WandbImageClassificationCallback(pl.Callback):
         config_defaults['opt_func']      = pl_module.hparams['opt_func'].func.__name__
         config_defaults['lr']            = pl_module.hparams['lr']
         config_defaults['lr_mult']       = pl_module.hparams['lr_mult']
-        config_defaults['learning_rate'] = pl_module.hparams['lr']
         config_defaults['weight_decay']  = keywords['weight_decay']
         config_defaults['model']         = pl_module.model.encoder_class_name
 
@@ -255,13 +254,10 @@ class WandbImageClassificationCallback(pl.Callback):
 
         pl_module.logger.log_hyperparams(config_defaults)
 
-    def on_train_batch_end(self, trainer, pl_module: LightningCassava, *args, **kwargs):
-        if self.num_batch == self.counter:
-            # log the training images for the 1st batch
-            train_ims = pl_module.one_batch_of_image
-            train_ims = train_ims.to('cpu')
-            trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]})
-            self.num_batch += 1
+    def on_train_batch_start(trainer, pl_module, batch, batch_idx, dataloader_idx):
+        one_batch = batch[:self.num_bs]
+        train_ims = one_batch.data.to('cpu')
+        trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]})
 
     def on_epoch_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         pl_module.val_labels_list = []
