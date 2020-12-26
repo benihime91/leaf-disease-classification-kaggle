@@ -26,15 +26,16 @@ index = {"idx2lbl": "00_core.ipynb",
          "cut_model": "02_layers.ipynb",
          "num_features_model": "02_layers.ipynb",
          "create_head": "02_layers.ipynb",
-         "TransferLearningModel": "02_layers.ipynb",
          "replace_activs": "02_layers.ipynb",
-         "SnapMixTransferLearningModel": "02_layers.ipynb"}
+         "TransferLearningModel": "02a_networks.ipynb",
+         "SnapMixTransferLearningModel": "02a_networks.ipynb"}
 
 modules = ["core.py",
            "lightning/core.py",
            "fast/core.py",
            "mixmethods.py",
-           "layers.py"]
+           "layers.py",
+           "networks.py"]
 
 doc_url = "https://fastai.github.io/src/"
 

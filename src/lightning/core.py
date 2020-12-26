@@ -22,6 +22,7 @@ from functools import partial
 from ..core import *
 from ..layers import *
 from ..mixmethods import *
+from ..networks import *
 
 # Cell
 def params(m):

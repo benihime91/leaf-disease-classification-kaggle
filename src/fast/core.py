@@ -7,6 +7,7 @@ import albumentations as A
 from fastai.vision.all import *
 from ..core import *
 from ..layers import *
+from ..networks import *
 
 # Cell
 class AlbumentationsTransform(RandTransform):

@@ -13,6 +13,7 @@ from functools import partial
 
 from .core import *
 from .layers import *
+from .networks import *
 
 # Cell
 # from : https://github.com/fastai/fastai/blob/493023513ddd5157647bd10e9cebbbbdc043474c/fastai/layers.py#L582
@@ -127,26 +128,23 @@ class SnapMix():
 
     @torch.no_grad()
     def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: SnapMixTransferLearningModel):
-
         bs = input.size(0)
 
         fms  = model.encoder(input)
-
         clsw = model.fc
 
         weight = clsw.weight.data
-
+        weight = weight.view(weight.size(0),weight.size(1),1,1)
         try   : bias = clsw.bias.data
         except: bias = None
-
-        weight = weight.view(weight.size(0),weight.size(1),1,1)
 
         fms      = F.relu(fms)
         poolfea  = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
         clslogit = F.softmax(clsw.forward(poolfea))
 
         logitlist = []
-        for i in range(bs):  logitlist.append(clslogit[i,target[i]])
+        for i in range(bs):
+            logitlist.append(clslogit[i,target[i]])
 
         clslogit = torch.stack(logitlist)
         out = F.conv2d(fms, weight, bias=bias)
@@ -179,9 +177,6 @@ class SnapMix():
         lam_a = torch.ones(xb.size(0), device=self.device)
         lam_b = 1 - lam_a
 
-        self.lam1 = lam_a
-        self.lam2 = lam_b
-
         self.yb  = yb
         self.yb1 = yb.clone()
 
@@ -189,8 +184,8 @@ class SnapMix():
 
         if r < self.conf_prob:
             wfmaps,_  = self.get_spm(xb, yb, model)
-            self.lam  = self.distrib.sample().to(self.device)
-            self.lam1 = self.distrib.sample().to(self.device)
+            lam  = self.distrib.sample().to(self.device)
+            lam1 = self.distrib.sample().to(self.device)
 
             rand_index = torch.randperm(bs, device=self.device)
             wfmaps_b = wfmaps[rand_index,:,:]
@@ -198,8 +193,8 @@ class SnapMix():
 
             same_label = self.yb == self.yb1
 
-            bbx1, bby1, bbx2, bby2 = self.rand_bbox(W, H, self.lam)
-            bbx1_1, bby1_1, bbx2_1, bby2_1 = self.rand_bbox(W, H, self.lam1)
+            bbx1, bby1, bbx2, bby2 = self.rand_bbox(W, H, lam)
+            bbx1_1, bby1_1, bbx2_1, bby2_1 = self.rand_bbox(W, H, lam1)
 
             area  = (bby2-bby1)*(bbx2-bbx1)
             area1 = (bby2_1-bby1_1)*(bbx2_1-bbx1_1)
@@ -209,8 +204,8 @@ class SnapMix():
                 ncont = F.interpolate(ncont, size=(bbx2-bbx1,bby2-bby1), mode='bilinear', align_corners=True)
                 xb[:, :, bbx1:bbx2, bby1:bby2] = ncont
 
-                self.lam_a = 1 - wfmaps[:,bbx1:bbx2,bby1:bby2].sum(2).sum(1)/(wfmaps.sum(2).sum(1)+1e-8)
-                self.lam_b = wfmaps_b[:,bbx1_1:bbx2_1,bby1_1:bby2_1].sum(2).sum(1)/(wfmaps_b.sum(2).sum(1)+1e-8)
+                lam_a = 1 - wfmaps[:,bbx1:bbx2,bby1:bby2].sum(2).sum(1)/(wfmaps.sum(2).sum(1)+1e-8)
+                lam_b = wfmaps_b[:,bbx1_1:bbx2_1,bby1_1:bby2_1].sum(2).sum(1)/(wfmaps_b.sum(2).sum(1)+1e-8)
 
                 tmp = lam_a.clone()
 
@@ -221,9 +216,9 @@ class SnapMix():
                 lam_a[torch.isnan(lam_a)] = lam
                 lam_b[torch.isnan(lam_b)] = 1-lam
 
+        # store attributes
         self.yb1, self.yb2 = self.yb, self.yb1
         self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
-
         self.model, self.xb = model, xb
         return self.xb
 
