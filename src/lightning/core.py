@@ -254,8 +254,9 @@ class WandbImageClassificationCallback(pl.Callback):
 
         pl_module.logger.log_hyperparams(config_defaults)
 
-    def on_train_batch_start(trainer, pl_module, batch, batch_idx, dataloader_idx):
-        one_batch = batch[:self.num_bs]
+    def on_train_epoch_start(trainer, pl_module, *args, **kwargs):
+        ims, _ = next(iter(self.dm.train_dataloader()))
+        one_batch = ims[:self.num_bs]
         train_ims = one_batch.data.to('cpu')
         trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]})
 
