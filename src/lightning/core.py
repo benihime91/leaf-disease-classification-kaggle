@@ -217,10 +217,14 @@ class WandbImageClassificationCallback(pl.Callback):
         self.counter   = num_log_train_batchs - 1
         self.dm = dm
 
-    def on_train_start(self, trainer, pl_module: LightningCassava):
-        # log model to the wandb experiment
-        wandb.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
+    def on_fit_start(self, trainer, pl_module):
+        try:
+            # log model to the wandb experiment
+            wandb.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
+        except:
+            log.info("Skipping wandb.watch --->")
 
+    def on_train_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         keywords = pl_module.hparams['opt_func'].keywords
         mm       = pl_module.hparams['mixmethod']
 
