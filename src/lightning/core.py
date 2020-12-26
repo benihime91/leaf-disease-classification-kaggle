@@ -217,10 +217,10 @@ class WandbImageClassificationCallback(pl.Callback):
         self.num_bs = num_batches
         self.curr_epoch = 0
 
-    def on_fit_start(self, trainer, pl_module):
+    def on_train_start(self, trainer, pl_module):
         try:
             # log model to the wandb experiment
-            trainer.logger.experiment.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
+            wandb.watch(models=pl_module.model, criterion=pl_module.hparams.loss_func)
         except:
             log.info("Skipping wandb.watch --->")
 
