@@ -105,6 +105,7 @@ def replace_activs(model, func, activs: list = [nn.ReLU, nn.SiLU]):
             replace_activs(child, func)
 
 # Cell
+#TODO: add midlevel classification branch in learning.
 class SnapMixTransferLearningModel(nn.Module):
     "Transfer Learning with model to be comaptible with Snapmix"
     def __init__(self, encoder:nn.Module, c:int, cut:int=-2, **kwargs):
@@ -129,23 +130,23 @@ class SnapMixTransferLearningModel(nn.Module):
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc   = nn.Linear(feats, self.c)
 
-        mid = len(self.encoder)//2 + 1
+#         mid = len(self.encoder)//2 + 1
 
-        self.mid_ls = cut_model(self.encoder, mid)
-        mid_dim = num_features_model(self.mid_ls)
+#         self.mid_ls = cut_model(self.encoder, mid)
+#         mid_dim = num_features_model(self.mid_ls)
 
-        mcls     = nn.Linear(mid_dim, self.c)
-        max_pool = nn.AdaptiveMaxPool2d((1, 1))
-        mid_conv = nn.Sequential(nn.Conv2d(mid_dim, mid_dim, 1, 1), nn.ReLU())
+#         mcls     = nn.Linear(mid_dim, self.c)
+#         max_pool = nn.AdaptiveMaxPool2d((1, 1))
+#         mid_conv = nn.Sequential(nn.Conv2d(mid_dim, mid_dim, 1, 1), nn.ReLU())
 
-        self.mcls= nn.Sequential(mid_conv, max_pool, nn.Flatten(), mcls)
+#         self.mcls= nn.Sequential(mid_conv, max_pool, nn.Flatten(), mcls)
 
-    def mid_forward(self, xb, detach=True):
-        out = self.mid_ls(xb)
+    def mid_forward(self, xb, detach=True): pass
+#         out = self.mid_ls(xb)
 
-        if detach: out.detach()
+#         if detach: out.detach()
 
-        return self.mcls(out)
+#         return self.mcls(out)
 
 
     @property

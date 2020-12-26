@@ -101,9 +101,11 @@ class Cutmix():
         return loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
 
 # Cell
+
+#TODO: add midlevel classification branch in learning.
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
-    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, mid_level:bool = True):
+    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, mid_level:bool = False):
         self.device = None
         self.distrib = Beta(tensor(alpha), tensor(alpha))
         self.conf_prob = conf_prob
@@ -226,9 +228,7 @@ class SnapMix():
         return self.xb
 
     def generate_mid_level_output(self):
-        assert self.mid_level
-        mlogits = self.model.mid_forward(self.xb)
-        return mlogits
+        pass
 
 
     def loss(self, lf, pred, *args, **kwargs):
@@ -237,8 +237,5 @@ class SnapMix():
         loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
 
         if self.mid_level:
-            mlogits = self.generate_mid_level_output()
-            loss_ma = lf(pred, self.yb1)
-            loss_mb = lf(pred, self.yb2)
-            loss   += torch.mean(loss_ma* self.lam_a + loss_mb* self.lam_b)
+            pass
         return loss
