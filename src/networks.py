@@ -48,7 +48,6 @@ class SnapMixTransferLearningModel(nn.Module):
             encoder: the classifer to extract features
             c: number of output classes
             cut: number of layers to cut/keep from the encoder
-            **kwargs: arguments for `create_head`
         """
         super(SnapMixTransferLearningModel, self).__init__()
 
@@ -60,9 +59,13 @@ class SnapMixTransferLearningModel(nn.Module):
         self.encoder = cut_model(encoder, cut)
         # create the custom head for the model
 
-        self.c    = c
-        self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc   = nn.Linear(feats, self.c)
+        self.c     = c
+        self.pool  = nn.AdaptiveAvgPool2d((1, 1))
+
+        layers  = [nn.Flatten(), nn.BatchNorm1d(feats), nn.Dropout(0.5)]
+        self.ls = nn.Sequential(*layers)
+
+        self.fc = nn.Linear(feats, self.c)
 
     def mid_forward(self, xb, detach=True):
         pass
@@ -73,5 +76,6 @@ class SnapMixTransferLearningModel(nn.Module):
 
     def forward(self, xb):
         fmps = self.encoder(xb)
-        x = self.pool(fmps).view(fmps.size(0), -1)
+        x = self.pool(fmps)
+        x = self.ls(x)
         return self.fc(x)

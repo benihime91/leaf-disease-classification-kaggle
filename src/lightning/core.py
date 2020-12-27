@@ -81,12 +81,15 @@ class LightningCassava(pl.LightningModule):
         self.save_hyperparameters(conf)
         self.metrics_to_log=['train/loss', 'train/acc', 'valid/loss', 'valid/acc', 'test/acc', 'valid/acc']
 
-        mixmethod = object_from_dict(self.hparams["mixmethod"])
-        # set mix method and loss function to be class attributes
-        self.mix_fn    = mixmethod
+        try    : mixmethod = object_from_dict(self.hparams["mixmethod"])
+        except : mixmethod = None
+
+        self.mix_fn = mixmethod
         self.loss_func = object_from_dict(self.hparams["loss_function"])
 
-        log.info(f'Mixmethod : {mixmethod.__class__.__name__}')
+        if self.mix_fn is not None:
+            log.info(f'Mixmethod : {self.mix_fn.__class__.__name__}')
+
         log.info(f'Loss Function : {self.loss_func}')
 
         self.val_labels_list = []
@@ -170,7 +173,10 @@ class LightningCassava(pl.LightningModule):
 
     @property
     def param_list(self):
-        param_list = [params(self.model.encoder), params(self.model.fc)]
+        if isinstance(self.model, SnapMixTransferLearningModel):
+            param_list = [params(self.model.encoder), params(self.model.fc)+params(self.model.ls)]
+        else:
+            param_list = [params(self.model.encoder), params(self.model.fc)]
         return param_list
 
     def save_model_weights(self, path:str):
