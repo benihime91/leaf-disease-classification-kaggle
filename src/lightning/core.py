@@ -229,7 +229,7 @@ class WandbImageClassificationCallback(pl.Callback):
         else:
             one_batch = pl_module.one_batch_of_image[:self.num_bs]
             train_ims = one_batch.data.to('cpu')
-            trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]})
+            trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]}, commit=False)
 
     def on_epoch_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         pl_module.val_labels_list = []
@@ -240,7 +240,7 @@ class WandbImageClassificationCallback(pl.Callback):
         val_labels = torch.tensor(pl_module.val_labels_list).data.cpu().numpy()
 
         # Log confusion matrix
-        wandb.log({'conf_mat': wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names)})
+        wandb.log({'conf_mat': wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names)}, commit=False)
 
 # Cell
 example_conf = dict(
