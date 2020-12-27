@@ -211,8 +211,9 @@ class WandbImageClassificationCallback(pl.Callback):
         except:
             log.info("Skipping wandb.watch --->")
 
-        self.default_config['train_tfms'] = train_tfms
-        self.default_config['valid_tfms'] = valid_tfms
+        train_augs, valid_augs = self.dm.train_augs, self.dm.valid_augs
+        self.default_config['train_augments'] = train_augs
+        self.default_config['valid_augments'] = valid_augs
 
         try:
             wandb.config.update(self.default_config)
