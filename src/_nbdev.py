@@ -2,7 +2,8 @@
 
 __all__ = ["index", "modules", "custom_doc_links", "git_url"]
 
-index = {"idx2lbl": "00_core.ipynb",
+index = {"object_from_dict": "00_core.ipynb",
+         "idx2lbl": "00_core.ipynb",
          "conf_mat_idx2lbl": "00_core.ipynb",
          "seed_everything": "00_core.ipynb",
          "generate_random_id": "00_core.ipynb",
@@ -14,6 +15,7 @@ index = {"idx2lbl": "00_core.ipynb",
          "CassavaLightningDataModule": "00a_lightning.core.ipynb",
          "LightningCassava": "00a_lightning.core.ipynb",
          "WandbImageClassificationCallback": "00a_lightning.core.ipynb",
+         "example_conf": "00a_lightning.core.ipynb",
          "AlbumentationsTransform": "00b_fastai.core.ipynb",
          "timm_learner": "00b_fastai.core.ipynb",
          "timm_splitter": "00b_fastai.core.ipynb",
