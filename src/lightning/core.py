@@ -187,7 +187,11 @@ class LightningCassava(pl.LightningModule):
 class WandbImageClassificationCallback(pl.Callback):
     """ Custom callback to add some extra functionalites to the wandb logger """
 
-    def __init__(self, dm: CassavaLightningDataModule, num_batches:int = 16):
+    def __init__(self,
+                 dm: CassavaLightningDataModule,
+                 default_config: dict = None,
+                 num_batches:int = 16):
+
         # class names for the confusion matrix
         self.class_names = list(conf_mat_idx2lbl.values())
 
@@ -196,6 +200,10 @@ class WandbImageClassificationCallback(pl.Callback):
         self.num_bs = num_batches
         self.curr_epoch = 0
 
+        if default_config is None: default_config = []
+
+        self.default_config = default_config
+
     def on_train_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         try:
             # log model to the wandb experiment
@@ -203,11 +211,11 @@ class WandbImageClassificationCallback(pl.Callback):
         except:
             log.info("Skipping wandb.watch --->")
 
-        config_defaults['train_tfms'] = train_tfms
-        config_defaults['valid_tfms'] = valid_tfms
+        self.default_config['train_tfms'] = train_tfms
+        self.default_config['valid_tfms'] = valid_tfms
 
         try:
-            wandb.config.update(self.config_defaults)
+            wandb.config.update(self.default_config)
             log.info("wandb config updated -->")
         except:
             log.info("Skipping update wandb config -->")
