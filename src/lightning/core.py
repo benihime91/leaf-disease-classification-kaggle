@@ -149,7 +149,7 @@ class LightningCassava(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         metrics = self.validation_step(batch, batch_idx)
         metrics = {'test/acc': metrics['valid/acc'], 'test/loss': metrics['valid/loss']}
-        self.log_dict(metrics, on_step=False, on_epoch=True)
+        self.log_dict(metrics, on_step=False, on_epoch=True, logger=True)
 
     def configure_optimizers(self):
         ps = self.param_list
@@ -247,10 +247,12 @@ class WandbImageClassificationCallback(pl.Callback):
 
         config_defaults['train_tfms'] = train_tfms
         config_defaults['valid_tfms'] = valid_tfms
-        config_defaults['callbacks']  = [cb.__class__.__name__ for cb in trainer.callbacks]
 
         self.config_defaults = config_defaults
         pl_module.logger.log_hyperparams(self.config_defaults)
+
+        try   : wandb.config.update(self.config_defaults)
+        except: pass
 
     def on_train_epoch_end(self, trainer, pl_module, *args, **kwargs):
         if pl_module.one_batch_of_image is None:
@@ -272,3 +274,9 @@ class WandbImageClassificationCallback(pl.Callback):
 
         # Log confusion matrix
         wandb.log({'conf_mat': wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names)})
+
+    def on_test_start(self, trainer, pl_module, *args, **kwargs):
+        pl_module.logger.log_hyperparams(self.config_defaults)
+
+        try   : wandb.config.update(self.config_defaults)
+        except: pass
