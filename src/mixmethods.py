@@ -106,7 +106,7 @@ class Cutmix():
 #TODO: add midlevel classification branch in learning.
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
-    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, mid_level:bool = False):
+    def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0, mid_level:bool = False):
         self.device = None
         self.distrib = Beta(tensor(alpha), tensor(alpha))
         self.conf_prob = conf_prob
