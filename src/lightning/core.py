@@ -251,8 +251,10 @@ class WandbImageClassificationCallback(pl.Callback):
         self.config_defaults = config_defaults
         pl_module.logger.log_hyperparams(self.config_defaults)
 
-        try   : wandb.config.update(self.config_defaults)
-        except: pass
+        try:
+            wandb.config.update(self.config_defaults)
+            log.info("wandb config updated -->")
+        except: log.info("Skipping update wandb config -->")
 
     def on_train_epoch_end(self, trainer, pl_module, *args, **kwargs):
         if pl_module.one_batch_of_image is None:
@@ -278,5 +280,7 @@ class WandbImageClassificationCallback(pl.Callback):
     def on_test_start(self, trainer, pl_module, *args, **kwargs):
         pl_module.logger.log_hyperparams(self.config_defaults)
 
-        try   : wandb.config.update(self.config_defaults)
-        except: pass
+        try:
+            wandb.config.update(self.config_defaults)
+            log.info("wandb config updated -->")
+        except: log.info("Skipping update wandb config -->")
