@@ -160,9 +160,9 @@ class LightningCassava(pl.LightningModule):
 
             # convert scheduler to lightning format
             sch = {'scheduler': sch,
-                   'monitor'  : self.hparams.metric_to_track,
-                   'interval' : self.hparams.step_after,
-                   'frequency': self.hparams.frequency}
+                   'monitor'  : self.hparams['metric_to_track'],
+                   'interval' : self.hparams['step_after'],
+                   'frequency': self.hparams['frequency']}
 
             return [opt], [sch]
 
