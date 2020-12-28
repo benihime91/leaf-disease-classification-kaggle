@@ -160,12 +160,13 @@ class LightningCassava(pl.LightningModule):
         opt = object_from_dict(self.hparams["optimizer"], params=param_list)
 
         if self.hparams["scheduler"] is not None:
-            try:
-                # for OneCycleLR set the LR so we can use LrFinder
-                lr_list = [self.hparams.lr/self.hparams.lr_mult, self.hparams.lr]
+
+            if self.hparams["scheduler"]["type"] == "torch.optim.lr_scheduler.OneCycleLR":
+                lr_list = [base_lr/self.hparams["lr_mult"], base_lr]
                 kwargs = dict(optimizer=opt, max_lr=lr_list, steps_per_epoch=len(self.train_dataloader()))
                 sch = object_from_dict(self.hparams["scheduler"], **kwargs)
-            except:
+
+            else:
                 sch = object_from_dict(self.hparams["scheduler"], optimizer=opt)
 
             # convert scheduler to lightning format
