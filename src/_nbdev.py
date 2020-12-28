@@ -30,14 +30,19 @@ index = {"object_from_dict": "00_core.ipynb",
          "create_head": "02_layers.ipynb",
          "replace_activs": "02_layers.ipynb",
          "TransferLearningModel": "02a_networks.ipynb",
-         "SnapMixTransferLearningModel": "02a_networks.ipynb"}
+         "SnapMixTransferLearningModel": "02a_networks.ipynb",
+         "Lookahead": "03_optimizers.ipynb",
+         "RAdam": "03_optimizers.ipynb",
+         "ranger": "03_optimizers.ipynb",
+         "FlatCos": "03_optimizers.ipynb"}
 
 modules = ["core.py",
            "lightning/core.py",
            "fast/core.py",
            "mixmethods.py",
            "layers.py",
-           "networks.py"]
+           "networks.py",
+           "opts.py"]
 
 doc_url = "https://fastai.github.io/src/"
 

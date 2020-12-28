@@ -24,6 +24,7 @@ from ..core import *
 from ..layers import *
 from ..mixmethods import *
 from ..networks import *
+from ..opts import *
 
 # Cell
 def params(m):
@@ -39,12 +40,14 @@ class CassavaLightningDataModule(pl.LightningDataModule):
 
         super().__init__()
         self.df = load_dataset(df_path, im_dir, curr_fold, True)
-        self.curr_fold = curr_fold
         self.train_augs, self.valid_augs = train_augs, valid_augs
         self.bs, self.workers = bs, num_workers
+        self.curr_fold = curr_fold
+        self.im_dir = im_dir
 
     def prepare_data(self):
-        log.info(f'Generating data for fold: {self.curr_fold}')
+        log.info(f'DATA: {self.im_dir}')
+        log.info(f'FOLD: {self.curr_fold}  BATCH_SIZE: {self.bs}')
         self.train_df: pd.DataFrame = self.df.loc[self.df['is_valid'] == False]
         self.valid_df: pd.DataFrame = self.df.loc[self.df['is_valid'] == True]
 
@@ -98,6 +101,7 @@ class LightningCassava(pl.LightningModule):
         self.train_accuracy = pl.metrics.Accuracy()
         self.valid_accuracy = pl.metrics.Accuracy()
         self.test_accuracy  = pl.metrics.Accuracy()
+        #log.info(self.hparams)
 
     def forward(self, xb):
         return self.model(xb)
@@ -136,8 +140,8 @@ class LightningCassava(pl.LightningModule):
         self.val_labels_list = self.val_labels_list + list(val_labels)
 
         metrics = {'valid/loss': loss, 'valid/acc': acc}
+
         self.log_dict(metrics, prog_bar=True, logger=True,)
-        return metrics
 
     def test_step(self, batch, batch_idx):
         x, y  = batch
@@ -147,7 +151,6 @@ class LightningCassava(pl.LightningModule):
 
         metrics = {'test/loss': loss, 'test/acc': acc}
         self.log_dict(metrics, on_step=False, on_epoch=True, logger=True)
-        return metrics
 
     def configure_optimizers(self):
         base_lr = self.hparams["learning_rate"]
@@ -166,6 +169,11 @@ class LightningCassava(pl.LightningModule):
                 kwargs = dict(optimizer=opt, max_lr=lr_list, steps_per_epoch=len(self.train_dataloader()))
                 sch = object_from_dict(self.hparams["scheduler"], **kwargs)
 
+            elif self.hparams["scheduler"]["type"] == "src.opts.FlatCos":
+                sch = object_from_dict(self.hparams["scheduler"],
+                                       optimizer=opt,
+                                       steps_per_epoch=len(self.train_dataloader()))
+
             else:
                 sch = object_from_dict(self.hparams["scheduler"], optimizer=opt)
 
@@ -175,9 +183,12 @@ class LightningCassava(pl.LightningModule):
                    'interval' : self.hparams['step_after'],
                    'frequency': self.hparams['frequency']}
 
+            log.info(f"Optimizer: {opt.__class__.__name__}  LR's: {(base_lr/self.hparams['lr_mult'], base_lr)}")
+            log.info(f"LR Scheculer: {sch['scheduler'].__class__.__name__}")
             return [opt], [sch]
 
         else:
+            log.info(f"Optimizer: {opt.__class__.__name__}")
             return [opt]
 
     @property
@@ -205,7 +216,10 @@ class WandbImageClassificationCallback(pl.Callback):
     def __init__(self,
                  dm: CassavaLightningDataModule,
                  default_config: dict = None,
-                 num_batches:int = 16):
+                 num_batches:int = 16,
+                 log_train_batch: bool = True,
+                 log_preds: bool = False,
+                 log_conf_mat: bool = True,):
 
         # class names for the confusion matrix
         self.class_names = list(conf_mat_idx2lbl.values())
@@ -214,6 +228,10 @@ class WandbImageClassificationCallback(pl.Callback):
         self.dm = dm
         self.num_bs = num_batches
         self.curr_epoch = 0
+        self.log_train_batch = log_train_batch
+        self.log_preds = log_preds
+        self.val_imgs, self.val_labels = None
+        self.log_conf_mat = log_conf_mat
 
         if default_config is None: default_config = []
 
@@ -237,25 +255,44 @@ class WandbImageClassificationCallback(pl.Callback):
             log.info("Skipping update wandb config -->")
 
     def on_train_epoch_end(self, trainer, pl_module, *args, **kwargs):
-        if pl_module.one_batch_of_image is None:
-            log.info(f"{self.config_defaults['mixmethod']} samples not available . Skipping --->")
-            pass
+        if self.log_train_batch:
+            if pl_module.one_batch_of_image is None:
+                log.info(f"{self.config_defaults['mixmethod']} samples not available . Skipping --->")
+                pass
 
-        else:
-            one_batch = pl_module.one_batch_of_image[:self.num_bs]
-            train_ims = one_batch.data.to('cpu')
-            trainer.logger.experiment.log({"train_batch": [wandb.Image(x) for x in train_ims]}, commit=False)
+            else:
+                one_batch = pl_module.one_batch_of_image[:self.num_bs]
+                train_ims = one_batch.data.to('cpu')
+                trainer.logger.experiment.log({"train_batch":[wandb.Image(x) for x in train_ims],
+                                               "global_step": trainer.global_step})
+        else:  pass
+
+    def on_validation_epoch_end(self, trainer, pl_module, *args, **kwargs):
+        if self.log_preds:
+            if self.val_imgs is None and self.val_labels is None:
+                self.val_imgs, self.val_labels = next(iter(self.dm.val_dataloader()))
+                self.val_imgs, self.val_labels = self.val_imgs[:self.num_bs], self.val_labels[:self.num_bs]
+                self.val_imgs = self.val_imgs.to(device=pl_module.device)
+
+            logits = pl_module(self.val_imgs)
+            preds  = torch.argmax(logits, 1)
+            preds  = preds.data.cpu()
+
+            trainer.logger.experiment.log({
+                "predictions": [wandb.Image(x, caption=f"Pred:{pred}, Label:{y}")
+                                for x, pred, y in zip(self.val_imgs, preds, self.val_labels)],
+                "global_step": trainer.global_step})
 
     def on_epoch_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         pl_module.val_labels_list = []
         pl_module.val_preds_list  = []
 
     def on_epoch_end(self, trainer, pl_module: LightningCassava, *args, **kwargs):
-        val_preds  = torch.tensor(pl_module.val_preds_list).data.cpu().numpy()
-        val_labels = torch.tensor(pl_module.val_labels_list).data.cpu().numpy()
-
-        # Log confusion matrix
-        wandb.log({'conf_mat': wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names)}, commit=False)
+        if self.log_conf_mat:
+            val_preds  = torch.tensor(pl_module.val_preds_list).data.cpu().numpy()
+            val_labels = torch.tensor(pl_module.val_labels_list).data.cpu().numpy()
+            wandb.log({'conf_mat'   : wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names),
+                       'global_step': trainer.global_step})
 
 # Cell
 example_conf = dict(
