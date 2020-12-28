@@ -73,13 +73,12 @@ class CassavaLightningDataModule(pl.LightningDataModule):
 class LightningCassava(pl.LightningModule):
     """LightningModule wrapper for `TransferLearningModel`"""
     def __init__(self, model: Union[TransferLearningModel, SnapMixTransferLearningModel], conf:dict):
-
         super().__init__()
+
         self.model = model
 
         # save hyper-parameters
         self.save_hyperparameters(conf)
-        self.metrics_to_log=['train/loss', 'train/acc', 'valid/loss', 'valid/acc', 'test/acc', 'valid/acc']
 
         try    : mixmethod = object_from_dict(self.hparams["mixmethod"])
         except : mixmethod = None
@@ -95,6 +94,10 @@ class LightningCassava(pl.LightningModule):
         self.val_labels_list = []
         self.val_preds_list  = []
         self.one_batch_of_image = None
+
+        self.train_accuracy = pl.metrics.Accuracy()
+        self.valid_accuracy = pl.metrics.Accuracy()
+        self.test_accuracy  = pl.metrics.Accuracy()
 
     def forward(self, xb):
         return self.model(xb)
@@ -113,7 +116,7 @@ class LightningCassava(pl.LightningModule):
 
         self.one_batch_of_image = x
 
-        train_acc = accuracy(torch.argmax(y_hat, dim=1), y)
+        train_acc = self.train_accuracy(y_hat, y)
 
         self.log('train/loss', loss, on_epoch=True)
         self.log('train/acc',  train_acc, on_epoch=True)
@@ -123,14 +126,13 @@ class LightningCassava(pl.LightningModule):
         x, y  = batch
         y_hat = self(x)
         loss  = self.loss_func(y_hat, y)
+        acc   = self.valid_accuracy(y_hat, y)
 
-        preds = torch.argmax(y_hat, dim=1)
-        acc   = accuracy(preds, y)
-
+        # For confusion matrix purposes
+        preds = torch.argmax(y_hat, 1)
         val_labels = y.data.cpu().numpy()
-        val_preds  = preds.data.cpu().numpy()
-
-        self.val_preds_list  = self.val_preds_list + list(val_preds)
+        val_preds = preds.data.cpu().numpy()
+        self.val_preds_list = self.val_preds_list + list(val_preds)
         self.val_labels_list = self.val_labels_list + list(val_labels)
 
         metrics = {'valid/loss': loss, 'valid/acc': acc}
@@ -138,9 +140,14 @@ class LightningCassava(pl.LightningModule):
         return metrics
 
     def test_step(self, batch, batch_idx):
-        metrics = self.validation_step(batch, batch_idx)
-        metrics = {'test/acc': metrics['valid/acc'], 'test/loss': metrics['valid/loss']}
+        x, y  = batch
+        y_hat = self(x)
+        loss  = self.loss_func(y_hat, y)
+        acc   = self.test_accuracy(y_hat, y)
+
+        metrics = {'test/loss': loss, 'test/acc': acc}
         self.log_dict(metrics, on_step=False, on_epoch=True, logger=True)
+        return metrics
 
     def configure_optimizers(self):
         base_lr = self.hparams["learning_rate"]
@@ -169,7 +176,8 @@ class LightningCassava(pl.LightningModule):
 
             return [opt], [sch]
 
-        else: return [opt]
+        else:
+            return [opt]
 
     @property
     def param_list(self):
