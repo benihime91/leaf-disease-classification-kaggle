@@ -103,7 +103,7 @@ class Cutmix():
 
 # Cell
 
-#TODO: add midlevel classification branch in learning.
+# @TODO: add midlevel classification branch in learning.
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
     def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0, mid_level:bool = False):
@@ -117,51 +117,59 @@ class SnapMix():
         cut_w = torch.round(W * cut_rat).type(torch.long).to(self.device)
         cut_h = torch.round(H * cut_rat).type(torch.long).to(self.device)
 
-        # uniform
+        #uniform
         cx = torch.randint(0, W, (1,), device=self.device)
         cy = torch.randint(0, H, (1,), device=self.device)
+
         x1 = torch.clamp(cx - cut_w // 2, 0, W)
         y1 = torch.clamp(cy - cut_h // 2, 0, H)
         x2 = torch.clamp(cx + cut_w // 2, 0, W)
         y2 = torch.clamp(cy + cut_h // 2, 0, H)
         return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
 
-    @torch.no_grad()
+
     def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: SnapMixTransferLearningModel):
+
+        bs, _, H, W = input.size()
+        img_size = (H, W)
         bs = input.size(0)
 
-        fms  = model.encoder(input)
-        clsw = model.fc
+        with torch.no_grad():
+            fms  = model.encoder(input)
 
-        weight = clsw.weight.data
-        weight = weight.view(weight.size(0),weight.size(1),1,1)
-        try   : bias = clsw.bias.data
-        except: bias = None
+            # grab the classification layer of the model
+            clsw = model.fc
 
-        fms      = F.relu(fms)
-        poolfea  = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
-        clslogit = F.softmax(clsw.forward(poolfea))
+            weight = clsw.weight.data
+            bias = clsw.bias.data
+            weight = weight.view(weight.size(0),weight.size(1),1,1)
 
-        logitlist = []
-        for i in range(bs):
-            logitlist.append(clslogit[i,target[i]])
+            fms = F.relu(fms)
+            poolfea = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
+            clslogit = F.softmax(clsw.forward(poolfea))
 
-        clslogit = torch.stack(logitlist)
-        out = F.conv2d(fms, weight, bias=bias)
+            logitlist = []
 
-        outmaps = []
-        for i in range(bs):
-            evimap = out[i,target[i]]
-            outmaps.append(evimap)
+            for i in range(bs):
+                logitlist.append(clslogit[i,target[i]])
 
-        outmaps = torch.stack(outmaps)
-        outmaps = outmaps.view(outmaps.size(0),1,outmaps.size(1),outmaps.size(2))
-        outmaps = F.interpolate(outmaps, self.img_size, mode='bilinear', align_corners=False)
-        outmaps = outmaps.squeeze()
+            clslogit = torch.stack(logitlist)
 
-        for i in range(bs):
-            outmaps[i] -= outmaps[i].min()
-            outmaps[i] /= outmaps[i].sum()
+            out = F.conv2d(fms, weight, bias=bias)
+
+            outmaps = []
+            for i in range(bs):
+                evimap = out[i,target[i]]
+                outmaps.append(evimap)
+
+            outmaps = torch.stack(outmaps)
+            outmaps = outmaps.view(outmaps.size(0),1,outmaps.size(1),outmaps.size(2))
+            outmaps = F.interpolate(outmaps, img_size, mode='bilinear', align_corners=False)
+            outmaps = outmaps.squeeze()
+
+            for i in range(bs):
+                outmaps[i] -= outmaps[i].min()
+                outmaps[i] /= outmaps[i].sum()
 
         return outmaps, clslogit
 
@@ -170,7 +178,8 @@ class SnapMix():
 
         self.img_size = (H,W)
 
-        if self.device is None: self.device = xb.device
+        if self.device is None:
+            self.device = xb.device
 
         r = np.random.rand(1)
 

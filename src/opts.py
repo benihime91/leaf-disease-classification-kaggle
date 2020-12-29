@@ -57,9 +57,10 @@ class Lookahead(Optimizer):
 # Cell
 class RAdam(Optimizer):
 
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-5, weight_decay=0.01):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-5, weight_decay=0.01, decouple_wd=True):
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
         self.buffer = [[None, None, None] for ind in range(10)]
+        self.decouple_wd = decouple_wd
         super(RAdam, self).__init__(params, defaults)
 
     def __setstate__(self, state):
@@ -76,6 +77,10 @@ class RAdam(Optimizer):
             for p in group['params']:
                 if p.grad is None:
                     continue
+
+                # Perform stepweight decay
+                if self.decouple_wd:  p.mul_(1 - group['lr'] * group['weight_decay'])
+
                 grad = p.grad.data.float()
                 if grad.is_sparse:
                     raise RuntimeError('RAdam does not support sparse gradients')
@@ -116,8 +121,9 @@ class RAdam(Optimizer):
                         step_size = 1.0 / (1 - beta1 ** state['step'])
                     buffered[2] = step_size
 
-                if group['weight_decay'] != 0:
-                    p_data_fp32.add_(-group['weight_decay'] * group['lr'], p_data_fp32)
+                if not self.decouple_wd:
+                    if group['weight_decay'] != 0:
+                        p_data_fp32.add_(-group['weight_decay'] * group['lr'], p_data_fp32)
 
                 # more conservative since it's an approximated value
                 if N_sma >= 5:
@@ -131,9 +137,9 @@ class RAdam(Optimizer):
         return loss
 
 # Cell
-def ranger(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=1e-02):
+def ranger(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=1e-02, decouple_wd=True):
     "Convenience method for `Lookahead` with `RAdam`"
-    return Lookahead(RAdam(params, lr, betas, eps, weight_decay))
+    return Lookahead(RAdam(params, lr, betas, eps, weight_decay, decouple_wd))
 
 # Cell
 class FlatCos(_LRScheduler):
@@ -148,7 +154,7 @@ class FlatCos(_LRScheduler):
         max_iter = num_epochs * steps_per_epoch
         self.flat_range = int(max_iter * pct_start)
         self.T_max = max_iter - self.flat_range
-        self.eta_min = 0
+        self.eta_min = eta_min
         super(FlatCos, self).__init__(optimizer, last_epoch)
 
     def get_lr(self):
