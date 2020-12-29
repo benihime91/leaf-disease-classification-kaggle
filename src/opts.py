@@ -12,6 +12,12 @@ import math
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 
+from collections import defaultdict
+from itertools import chain
+from torch.optim import Optimizer
+import torch
+import warnings
+
 # Cell
 # Lookahead implementation from https://github.com/lonePatient/lookahead_pytorch/blob/master/optimizer.py
 class Lookahead(Optimizer):
