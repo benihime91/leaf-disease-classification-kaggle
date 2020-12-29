@@ -217,7 +217,7 @@ class WandbImageClassificationCallback(pl.Callback):
                  dm: CassavaLightningDataModule,
                  default_config: dict = None,
                  num_batches:int = 16,
-                 log_train_batch: bool = True,
+                 log_train_batch: bool = False,
                  log_preds: bool = False,
                  log_conf_mat: bool = True,):
 
@@ -263,11 +263,7 @@ class WandbImageClassificationCallback(pl.Callback):
             else:
                 one_batch = pl_module.one_batch_of_image[:self.num_bs]
                 train_ims = one_batch.data.to('cpu')
-
-                {"train_batch":[wandb.Image(x) for x in train_ims]}
-                trainer.logger.experiment.log(log_dict, commit=False)
-        else:
-            pass
+                trainer.logger.experiment.log({"train_batch":[wandb.Image(x) for x in train_ims]}, commit=False)
 
     def on_validation_epoch_end(self, trainer, pl_module, *args, **kwargs):
         if self.log_preds:
@@ -279,8 +275,8 @@ class WandbImageClassificationCallback(pl.Callback):
             logits = pl_module(self.val_imgs)
             preds  = torch.argmax(logits, 1)
             preds  = preds.data.cpu()
-            log_dict = {"predictions": [wandb.Image(x, caption=f"Pred:{pred}, Label:{y}") for x, pred, y in zip(self.val_imgs, preds, self.val_labels)]}
-            trainer.logger.experiment.log(log_dict, commit=False)
+            trainer.logger.experiment.log({"predictions": [wandb.Image(x, caption=f"Pred:{pred}, Label:{y}") for x, pred, y in zip(self.val_imgs, preds, self.val_labels)]},
+                                          commit=False)
 
     def on_epoch_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         pl_module.val_labels_list = []

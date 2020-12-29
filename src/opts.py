@@ -140,7 +140,8 @@ class RAdam(Optimizer):
                     continue
 
                 # Perform stepweight decay
-                if self.decouple_wd:  p.mul_(1 - group['lr'] * group['weight_decay'])
+                if self.decouple_wd:
+                    p.data.mul_(1 - group['lr'] * group['weight_decay'])
 
                 grad = p.grad.data.float()
                 if grad.is_sparse:
