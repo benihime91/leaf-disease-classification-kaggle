@@ -263,9 +263,11 @@ class WandbImageClassificationCallback(pl.Callback):
             else:
                 one_batch = pl_module.one_batch_of_image[:self.num_bs]
                 train_ims = one_batch.data.to('cpu')
-                trainer.logger.experiment.log({"train_batch":[wandb.Image(x) for x in train_ims],
-                                               "global_step": trainer.global_step})
-        else:  pass
+
+                {"train_batch":[wandb.Image(x) for x in train_ims]}
+                trainer.logger.experiment.log(log_dict, commit=False)
+        else:
+            pass
 
     def on_validation_epoch_end(self, trainer, pl_module, *args, **kwargs):
         if self.log_preds:
@@ -277,11 +279,8 @@ class WandbImageClassificationCallback(pl.Callback):
             logits = pl_module(self.val_imgs)
             preds  = torch.argmax(logits, 1)
             preds  = preds.data.cpu()
-
-            trainer.logger.experiment.log({
-                "predictions": [wandb.Image(x, caption=f"Pred:{pred}, Label:{y}")
-                                for x, pred, y in zip(self.val_imgs, preds, self.val_labels)],
-                "global_step": trainer.global_step})
+            log_dict = {"predictions": [wandb.Image(x, caption=f"Pred:{pred}, Label:{y}") for x, pred, y in zip(self.val_imgs, preds, self.val_labels)]}
+            trainer.logger.experiment.log(log_dict, commit=False)
 
     def on_epoch_start(self, trainer, pl_module: LightningCassava, *args, **kwargs):
         pl_module.val_labels_list = []
@@ -291,8 +290,8 @@ class WandbImageClassificationCallback(pl.Callback):
         if self.log_conf_mat:
             val_preds  = torch.tensor(pl_module.val_preds_list).data.cpu().numpy()
             val_labels = torch.tensor(pl_module.val_labels_list).data.cpu().numpy()
-            wandb.log({'conf_mat'   : wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names),
-                       'global_step': trainer.global_step})
+            log_dict = {'conf_mat': wandb.plot.confusion_matrix(val_preds,val_labels,self.class_names)}
+            wandb.log(log_dict,commit=False)
 
 # Cell
 example_conf = dict(
