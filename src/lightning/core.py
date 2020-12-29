@@ -230,7 +230,7 @@ class WandbImageClassificationCallback(pl.Callback):
         self.curr_epoch = 0
         self.log_train_batch = log_train_batch
         self.log_preds = log_preds
-        self.val_imgs, self.val_labels = None
+        self.val_imgs, self.val_labels = None, None
         self.log_conf_mat = log_conf_mat
 
         if default_config is None: default_config = []
