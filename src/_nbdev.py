@@ -34,7 +34,7 @@ index = {"object_from_dict": "00_core.ipynb",
          "SnapMixTransferLearningModel": "02a_networks.ipynb",
          "Lookahead": "03_optimizers.ipynb",
          "RAdam": "03_optimizers.ipynb",
-         "ranger": "03_optimizers.ipynb",
+         "Ranger": "03_optimizers.ipynb",
          "FlatCos": "03_optimizers.ipynb"}
 
 modules = ["core.py",
