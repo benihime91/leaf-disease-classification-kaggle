@@ -1,0 +1,68 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+  - augmentation: light_augs
+  - trainer: default
+
+config:
+  random_seed: 42
+  project_name: kaggle-leaf-disease-v2
+
+  unique_idx: null
+
+  curr_fold: 0
+  image_dir: /Users/ayushman/Desktop/Datasets/cassava-leaf-disease-classification/train_images/
+  csv_path: /Users/ayushman/Desktop/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+
+  encoder: seresnext50_32x4d
+
+  activation:
+    _target_: torch.nn.ReLU
+    inplace: true
+
+  image_dims: 512
+  num_epochs: 40
+  batch_size: 64
+  accumulate_batches: 1
+  clip_grad_norm: 0.5
+
+network:
+  model:
+    _target_: timm.create_model
+    model_name: ${config.encoder}
+    pretrained: True
+
+  transfer_learning_model:
+    _target_: src.networks.SnapMixTransferLearningModelBasic
+    cut: -2
+    c: 5
+
+hparams:
+  mixmethod:
+    _target_: src.mixmethods.SnapMix
+    alpha: 5.0
+    conf_prob: 1.0
+
+  loss_function:
+    _target_: src.core.LabelSmoothingCrossEntropy
+    eps: 0.1
+
+  learning_rate: 0.001
+  lr_mult: 100
+
+  optimizer:
+    _target_: torch.optim.AdamW
+    weight_decay: 0.01
+    betas: (.95, 0.999)
+    eps: 1e-06
+
+  scheduler:
+    _target_: src.opts.CosineAnnealingWarmupScheduler
+    warmup_epochs: 2
+    total_epochs: ${config.num_epochs}
+
+  metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
+  step_after: epoch # step or epoch
+  frequency: 1 # scheduler call frequency
+
+save_dir: models/

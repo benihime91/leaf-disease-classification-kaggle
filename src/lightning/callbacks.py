@@ -13,6 +13,9 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning import _logger as log
 
+from .core import *
+from ..core import *
+
 # Cell
 class WandbImageClassificationCallback(pl.Callback):
     """ Custom callback to add some extra functionalites to the wandb logger """
@@ -86,7 +89,7 @@ class WandbImageClassificationCallback(pl.Callback):
         pl_module.val_labels_list = []
         pl_module.val_preds_list  = []
 
-    def on_epoch_end(self, trainer, pl_module: LightningCassava, *args, **kwargs):
+    def on_epoch_end(self, trainer, pl_module, *args, **kwargs):
         if self.log_conf_mat:
             val_preds  = torch.tensor(pl_module.val_preds_list).data.cpu().numpy()
             val_labels = torch.tensor(pl_module.val_labels_list).data.cpu().numpy()
