@@ -11,8 +11,8 @@ config:
   unique_idx: null
 
   curr_fold: 0
-  image_dir: cassava-leaf-disease-classification/train_images/
-  csv_path: leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+  image_dir: /content/cassava-leaf-disease-classification/train_images
+  csv_path: /content/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
 
   encoder: seresnext50_32x4d
 
@@ -22,7 +22,7 @@ config:
 
   image_dims: 320
   num_epochs: 30
-  batch_size: 16
+  batch_size: 32
   accumulate_batches: 1
   clip_grad_norm: 0.1
 
@@ -52,7 +52,7 @@ hparams:
 
   optimizer:
     _target_: torch.optim.Adam
-    weight_decay: 0.00001
+    weight_decay: 0.0001
     betas: (.9, 0.99)
     eps: 1e-05
 
