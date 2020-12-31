@@ -432,11 +432,18 @@ class GradualWarmupScheduler(_LRScheduler):
             self.step_ReduceLROnPlateau(metrics, epoch)
 
 # Cell
-def CosineAnnealingWarmupScheduler(optimizer:Optimizer, warmup_epochs:int, total_epochs:int, eta_min=0):
-    "Warmup up for `warmup_epochs` after which CosineAnnealing"
-    cosine_scheduler = CosineAnnealingLR(optimizer, T_max=total_epochs, eta_min=eta_min)
+def CosineAnnealingWarmupScheduler(optimizer:Optimizer, total_epochs:int,
+                                   steps_per_epoch:int, eta_min:float=0.,
+                                   pct_start:float = 0.1):
 
-    warmup_scheduler = GradualWarmupScheduler(optimizer, multiplier=1,
-                                              total_epoch=warmup_epochs,
-                                              after_scheduler=cosine_scheduler)
+    "Warmup till `pct_start` after which CosineAnnealing"
+    total_steps  = total_epochs * steps_per_epoch
+    warmup_steps = pct_start * total_steps
+
+    cosine_scheduler = CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=eta_min)
+
+    warmup_scheduler = GradualWarmupScheduler(optimizer,
+                                            multiplier=1,
+                                            total_epoch=warmup_steps,
+                                            after_scheduler=cosine_scheduler)
     return warmup_scheduler

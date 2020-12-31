@@ -177,8 +177,13 @@ class LightningCassava(pl.LightningModule):
 
             elif self.hparams["scheduler"]["_target_"] == "src.opts.FlatCos":
                 sch = instantiate(self.hparams["scheduler"],
-                                       optimizer=opt,
-                                       steps_per_epoch=len(self.train_dataloader()))
+                                  optimizer=opt,
+                                  steps_per_epoch=len(self.train_dataloader()))
+
+            elif self.hparams["scheduler"]["_target_"] == "src.opts.CosineAnnealingWarmupScheduler":
+                sch = instantiate(self.hparams["scheduler"],
+                                 optimizer=opt,
+                                 steps_per_epoch=len(self.train_dataloader()))
 
             else:
                 sch = instantiate(self.hparams["scheduler"], optimizer=opt)
