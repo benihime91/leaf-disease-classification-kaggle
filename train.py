@@ -87,7 +87,7 @@ def train(cfg: DictConfig) -> None:
     # initialize pytorch_lightning Trainer + Callbacks
     callbacks = [
         LitProgressBar(),  # custom progress bar callback to stop tqdm from printing new lines
-        PrintLogsCallback(),  # prints the logs after each epoch
+        PrintLogsCallback(logger=log),  # prints the logs after each epoch
         pl.callbacks.LearningRateMonitor(model_hparams.step_after),  # monitors the learning-rates(s)
         WandbImageClassificationCallback(litdm, default_config=default_config),  # supercharge wandb
     ]
@@ -117,8 +117,7 @@ def train(cfg: DictConfig) -> None:
 
     # automatically loads in the best model weights
     # according to metric in checkpoint callback
-    results = trainer.test(datamodule=litdm, ckpt_path="best", verbose=False)
-    log.info(results)
+    _ = trainer.test(litModel, datamodule=litdm, ckpt_path="best", verbose=False)
 
     # create model save dir
     os.makedirs(cfg.save_dir, exist_ok=True)
