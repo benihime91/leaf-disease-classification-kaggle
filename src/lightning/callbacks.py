@@ -39,9 +39,6 @@ class WandbImageClassificationCallback(pl.Callback):
         self.log_preds = log_preds
         self.val_imgs, self.val_labels = None, None
         self.log_conf_mat = log_conf_mat
-
-        if default_config is None: default_config = []
-
         self.default_config = default_config
 
     def on_train_start(self, trainer, pl_module, *args, **kwargs):
@@ -52,14 +49,15 @@ class WandbImageClassificationCallback(pl.Callback):
             log.info("Skipping wandb.watch --->")
 
         train_augs, valid_augs = self.dm.train_augs, self.dm.valid_augs
-        self.default_config['train_augments'] = train_augs
-        self.default_config['valid_augments'] = valid_augs
+        self.train_config = dict(train_augments=train_augs, valid_augments=valid_augs)
 
-        try:
-            wandb.config.update(self.default_config)
-            log.info("wandb config updated -->")
-        except:
-            log.info("Skipping update wandb config -->")
+        if self.default_config is not None:
+            try:
+                wandb.config.update(self.default_config)
+                wandb.config.update(self.train_config)
+                log.info("wandb config updated -->")
+            except:
+                log.info("Skipping update wandb config -->")
 
     def on_train_epoch_end(self, trainer, pl_module, *args, **kwargs):
         if self.log_train_batch:

@@ -8,6 +8,7 @@ import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
+import gc
 
 from src.core import *
 from src.layers import *
@@ -23,6 +24,9 @@ def parse_float_tuple(input) -> tuple:
 
 
 def train(cfg: DictConfig) -> None:
+    "main training function"
+
+    # break up the configs
     default_config = cfg.config
     model_hparams = cfg.hparams
     net_config = cfg.network
@@ -51,6 +55,7 @@ def train(cfg: DictConfig) -> None:
 
     model = instantiate(net_config.transfer_learning_model, encoder=encoder, act=activ)
 
+    # replace activation functions if not ReLU
     if default_config.activation._target_ != "torch.nn.ReLU":
         replace_activs(model.encoder, func=activ)
 
@@ -58,6 +63,7 @@ def train(cfg: DictConfig) -> None:
     apply_init(model.fc, torch.nn.init.kaiming_normal_)
 
     # convert betas to tuple floats
+    # if beta values are given
     try:
         model_hparams.optimizer.betas = parse_float_tuple(model_hparams.optimizer.betas)
     except:
@@ -67,6 +73,7 @@ def train(cfg: DictConfig) -> None:
     # wrap the model in LightningModule
     litModel = LightningCassava(model=model, conf=model_hparams)
 
+    # load the lightning datamodule
     litdm = CassavaLightningDataModule(
         default_config.csv_path,
         default_config.image_dir,
@@ -79,10 +86,10 @@ def train(cfg: DictConfig) -> None:
 
     # initialize pytorch_lightning Trainer + Callbacks
     callbacks = [
-        LitProgressBar(),
-        PrintLogsCallback(),
-        pl.callbacks.LearningRateMonitor(model_hparams.step_after),
-        WandbImageClassificationCallback(litdm, default_config=default_config),
+        LitProgressBar(),  # custom progress bar callback to stop tqdm from printing new lines
+        PrintLogsCallback(),  # prints the logs after each epoch
+        pl.callbacks.LearningRateMonitor(model_hparams.step_after),  # monitors the learning-rates(s)
+        WandbImageClassificationCallback(litdm, default_config=default_config),  # supercharge wandb
     ]
 
     chkpt_callback = pl.callbacks.ModelCheckpoint(
@@ -92,6 +99,7 @@ def train(cfg: DictConfig) -> None:
         filename=os.path.join(cfg.save_dir, MODEL_NAME),
     )
 
+    # wandb logger
     wb_logger = pl.loggers.WandbLogger(
         project=default_config.project_name, log_model=True
     )
@@ -106,23 +114,47 @@ def train(cfg: DictConfig) -> None:
 
     # start the training job
     trainer.fit(litModel, datamodule=litdm)
+
     # automatically loads in the best model weights
     # according to metric in checkpoint callback
     results = trainer.test(datamodule=litdm, ckpt_path="best", verbose=False)
     log.info(results)
 
+    # create model save dir
+    os.makedirs(cfg.save_dir, exist_ok=True)
     path = os.path.join(cfg.save_dir, f"{MODEL_NAME}.pt")
 
     # save the weights of the model
     litModel.save_model_weights(path)
+
+    # upload weights to wandb
     wandb.save(path)
+
+    # clean up and free memory
+    try:
+        del encoder
+        del litModel
+        del litdm
+        del trainer
+
+        gc.collect()
+
+    except:
+        pass
 
 
 @hydra.main(config_path="conf", config_name="example")
-def main(cfg: DictConfig) -> None:
+def cli_main(cfg: DictConfig) -> None:
     train(cfg)
 
 
 if __name__ == "__main__":
+    import warnings
 
-    main()
+    logger = logging.getLogger("wandb")
+    logger.setLevel(logging.ERROR)
+
+    warnings.filterwarnings("ignore")
+
+    # run train
+    cli_main()

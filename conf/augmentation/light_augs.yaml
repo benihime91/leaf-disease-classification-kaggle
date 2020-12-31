@@ -22,7 +22,7 @@ train:
   - _target_: albumentations.Resize
     height: ${config.image_dims}
     width: ${config.image_dims}
-    p: 0.5
+    p: 1.0
 
   - _target_: albumentations.Normalize
     p: 1.0
@@ -34,6 +34,7 @@ valid:
   - _target_: albumentations.Resize
     height: ${config.image_dims}
     width: ${config.image_dims}
+    p: 1.0
 
   - _target_: albumentations.Normalize
     p: 1.0
