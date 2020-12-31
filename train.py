@@ -136,8 +136,8 @@ def train(cfg: DictConfig) -> None:
         del litModel
         del litdm
         del trainer
-
         gc.collect()
+        torch.cuda.empty_cache()
 
     except:
         pass
