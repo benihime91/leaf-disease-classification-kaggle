@@ -4,6 +4,7 @@ __all__ = ['Lookahead', 'RAdam', 'Ranger', 'FlatCos', 'GradualWarmupScheduler', 
 
 # Cell
 from collections import defaultdict
+from typing import Union
 
 import torch
 from torch.optim.optimizer import Optimizer, required
@@ -434,11 +435,13 @@ class GradualWarmupScheduler(_LRScheduler):
 # Cell
 def CosineAnnealingWarmupScheduler(optimizer:Optimizer, total_epochs:int,
                                    steps_per_epoch:int, eta_min:float=0.,
-                                   pct_start:float = 0.1):
+                                   pct_start:Union[float, int] = 0.1):
 
     "Warmup till `pct_start` after which CosineAnnealing"
     total_steps  = total_epochs * steps_per_epoch
-    warmup_steps = pct_start * total_steps
+
+    if isinstance(pct_start, int)    :  warmup_steps = pct_start
+    elif isinstance(pct_start, float):  warmup_steps = pct_start * total_steps
 
     cosine_scheduler = CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=eta_min)
 
