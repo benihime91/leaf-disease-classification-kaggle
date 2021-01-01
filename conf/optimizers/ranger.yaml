@@ -1,0 +1,12 @@
+# @package optimizer
+_target_: src.opts.Ranger
+alpha: 0.5
+k: 6
+N_sma_threshhold: 5
+use_gc: true
+gc_conv_only: false
+weight_decay: 0.01
+betas:
+  - .95
+  - 0.999
+eps: 0.00001

@@ -1,0 +1,2 @@
+# @package optimizer
+_target_: torch.optim.Adam

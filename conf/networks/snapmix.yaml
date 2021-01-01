@@ -1,7 +1,7 @@
 # @package network
 model:
   _target_: timm.create_model
-  model_name: ${config.encoder}
+  model_name: ${encoder}
   pretrained: True
 
 transfer_learning_model:

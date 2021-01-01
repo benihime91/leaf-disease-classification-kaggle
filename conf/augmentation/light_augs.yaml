@@ -4,13 +4,13 @@ train:
     p: 0.5
 
   - _target_: albumentations.RandomResizedCrop
-    height: ${config.image_dims}
-    width: ${config.image_dims}
-    p: 0.5
+    height: ${image_dims}
+    width: ${image_dims}
+    p: 1.0
 
   - _target_: albumentations.Resize
-    height: ${config.image_dims}
-    width: ${config.image_dims}
+    height: ${image_dims}
+    width: ${image_dims}
     p: 1.0
 
   - _target_: albumentations.Normalize
@@ -21,8 +21,8 @@ train:
 
 valid:
   - _target_: albumentations.Resize
-    height: ${config.image_dims}
-    width: ${config.image_dims}
+    height: ${image_dims}
+    width: ${image_dims}
     p: 1.0
 
   - _target_: albumentations.Normalize

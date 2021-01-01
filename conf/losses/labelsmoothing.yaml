@@ -1,0 +1,3 @@
+# @package loss
+_target_: src.losses.LabelSmoothingCrossEntropy
+eps: 0.1

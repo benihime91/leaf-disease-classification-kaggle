@@ -1,0 +1,4 @@
+# @package scheduler
+_target_: src.opts.CosineAnnealingWarmupScheduler
+warmup_epochs: 2
+total_epochs: ${num_epochs}

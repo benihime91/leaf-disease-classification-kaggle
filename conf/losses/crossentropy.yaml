@@ -1,0 +1,4 @@
+# @package loss
+_target_: torch.nn.CrossEntropyLoss
+weight: null
+reduction: mean

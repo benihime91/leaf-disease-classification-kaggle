@@ -1,0 +1,4 @@
+# @package scheduler
+_target_: src.opts.FlatCos
+num_epochs: ${num_epochs}
+pct_start: 0.7
