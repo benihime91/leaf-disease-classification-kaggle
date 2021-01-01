@@ -21,9 +21,9 @@ config:
     _target_: torch.nn.ReLU
     inplace: true
 
-  image_dims: 448
+  image_dims: 512
   num_epochs: 40
-  batch_size: 32
+  batch_size: 64
   accumulate_batches: 1 # 1 means don't accumulate gradients
   clip_grad_norm: 0 # o means don't clip grdients
 
@@ -49,7 +49,7 @@ hparams:
   scheduler:
     _target_: src.opts.CosineAnnealingWarmupScheduler
     total_epochs: ${config.num_epochs}
-    pct_start: 1000 # integer of float for when to start cosine Annealing
+    pct_start: 0.1 # integer of float for when to start cosine Annealing
 
   metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
   step_after: step # step or epoch
