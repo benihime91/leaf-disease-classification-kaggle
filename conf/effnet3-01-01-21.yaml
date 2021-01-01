@@ -21,8 +21,8 @@ config:
     _target_: torch.nn.ReLU
     inplace: true
 
-  image_dims: 512
-  num_epochs: 40
+  image_dims: 320
+  num_epochs: 30
   batch_size: 64
   accumulate_batches: 1 # 1 means don't accumulate gradients
   clip_grad_norm: 0.1 # o means don't clip grdients
