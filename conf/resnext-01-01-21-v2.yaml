@@ -21,7 +21,7 @@ config:
     _target_: src.layers.Mish
 
   image_dims: 320
-  num_epochs: 30
+  num_epochs: 40
   batch_size: 64
   accumulate_batches: 1 # 1 means don't accumulate gradients
   clip_grad_norm: 0 # o means don't clip grdients
