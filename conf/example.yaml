@@ -3,6 +3,7 @@ defaults:
   - hydra/hydra_logging: colorlog
   - augmentation: light_augs
   - trainer: default
+  - networks: snapmix
 
 config:
   random_seed: 42
@@ -25,17 +26,6 @@ config:
   batch_size: 64
   accumulate_batches: 1
   clip_grad_norm: 0.5
-
-network:
-  model:
-    _target_: timm.create_model
-    model_name: ${config.encoder}
-    pretrained: True
-
-  transfer_learning_model:
-    _target_: src.networks.SnapMixTransferLearningModelBasic
-    cut: -2
-    c: 5
 
 hparams:
   mixmethod:

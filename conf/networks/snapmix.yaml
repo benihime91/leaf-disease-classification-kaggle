@@ -1,0 +1,10 @@
+# @package network
+model:
+  _target_: timm.create_model
+  model_name: ${config.encoder}
+  pretrained: True
+
+transfer_learning_model:
+  _target_: src.networks.SnapMixTransferLearningModelBasic
+  cut: -2
+  c: 5

@@ -3,6 +3,7 @@ defaults:
   - hydra/hydra_logging: colorlog
   - augmentation: light_augs
   - trainer: default
+  - networks: snapmix
 
 config:
   random_seed: 42
@@ -20,22 +21,11 @@ config:
     _target_: torch.nn.ReLU
     inplace: true
 
-  image_dims: 320
-  num_epochs: 30
+  image_dims: 448
+  num_epochs: 40
   batch_size: 32
-  accumulate_batches: 1
-  clip_grad_norm: 0.5
-
-network:
-  model:
-    _target_: timm.create_model
-    model_name: ${config.encoder}
-    pretrained: True
-
-  transfer_learning_model:
-    _target_: src.networks.SnapMixTransferLearningModelBasic
-    cut: -2
-    c: 5
+  accumulate_batches: 1 # 1 means don't accumulate gradients
+  clip_grad_norm: 0 # o means don't clip grdients
 
 hparams:
   mixmethod:
@@ -47,19 +37,19 @@ hparams:
     _target_: src.core.LabelSmoothingCrossEntropy
     eps: 0.1
 
-  learning_rate: 0.004
-  lr_mult: 100
+  learning_rate: 0.01
+  lr_mult: 10
 
   optimizer:
-    _target_: torch.optim.Adam
-    weight_decay: 1e-06
-    betas: (0.9, 0.999)
-    eps: 1e-08
+    _target_: torch.optim.SGD
+    weight_decay: 0.001
+    momentum: 0.9
+    nesterov: True
 
   scheduler:
     _target_: src.opts.CosineAnnealingWarmupScheduler
     total_epochs: ${config.num_epochs}
-    pct_start: 0.1
+    pct_start: 1000 # integer of float for when to start cosine Annealing
 
   metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
   step_after: step # step or epoch
