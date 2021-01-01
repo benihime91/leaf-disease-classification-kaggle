@@ -51,7 +51,7 @@ hparams:
     milestones:
     - 1
     - 20
-    - 40
+    - 32
     gamma: 0.1
 
   metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
