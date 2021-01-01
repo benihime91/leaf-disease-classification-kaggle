@@ -21,11 +21,11 @@ config:
     _target_: torch.nn.ReLU
     inplace: true
 
-  image_dims: 320
+  image_dims: 412
   num_epochs: 40
   batch_size: 64
   accumulate_batches: 1 # 1 means don't accumulate gradients
-  clip_grad_norm: 0 # o means don't clip grdients
+  clip_grad_norm: 0 # 0 means don't clip grdients
 
 hparams:
   mixmethod:
@@ -43,13 +43,13 @@ hparams:
   optimizer:
     _target_: torch.optim.SGD
     momentum: 0.9
-    weight_decay: 1e-4 
+    weight_decay: 0.001 
     nesterov: True
 
   scheduler:
     _target_: torch.optim.lr_scheduler.MultiStepLR
     milestones:
-    - 1
+    - 12
     - 20
     - 32
     gamma: 0.1
