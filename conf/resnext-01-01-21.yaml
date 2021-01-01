@@ -1,0 +1,58 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+  - augmentation: light_augs
+  - trainer: default
+  - networks: snapmix
+
+config:
+  random_seed: 42
+  project_name: kaggle-leaf-disease-hydra-cli
+
+  unique_idx: null
+
+  curr_fold: 0
+  image_dir: /home/qblocks/train_images
+  csv_path: /home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+
+  encoder: resnext50_32x4d
+
+  activation:
+    _target_: torch.nn.ReLU
+    inplace: true
+
+  image_dims: 320
+  num_epochs: 30
+  batch_size: 64
+  accumulate_batches: 1 # 1 means don't accumulate gradients
+  clip_grad_norm: 0 # o means don't clip grdients
+
+hparams:
+  mixmethod:
+    _target_: src.mixmethods.SnapMix
+    alpha: 5.0
+    conf_prob: 1.0
+
+  loss_function:
+    _target_: src.core.LabelSmoothingCrossEntropy
+    eps: 0.1
+
+  learning_rate: 0.01
+  lr_mult: 10
+
+  optimizer:
+    _target_: torch.optim.SGD
+    weight_decay: 0.01
+    momentum: 0.9
+    nesterov: True
+
+  scheduler:
+    _target_: src.opts.CosineAnnealingWarmupScheduler
+    total_epochs: ${config.num_epochs}
+    pct_start: 0.1 # integer of float for when to start cosine Annealing
+
+  metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
+  step_after: step # step or epoch
+  frequency: 1 # scheduler call frequency
+
+save_dir: models/
