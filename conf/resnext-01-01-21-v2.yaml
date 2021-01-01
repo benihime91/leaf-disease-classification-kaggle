@@ -1,0 +1,57 @@
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+  - augmentation: light_augs
+  - trainer: default
+  - networks: snapmix
+
+config:
+  random_seed: 42
+  project_name: kaggle-leaf-disease-hydra-cli
+
+  unique_idx: null
+
+  curr_fold: 0
+  image_dir: /home/qblocks/train_images
+  csv_path: /home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+
+  encoder: resnext50_32x4d
+
+  activation:
+    _target_: src.layers.Mish
+
+  image_dims: 320
+  num_epochs: 40
+  batch_size: 64
+  accumulate_batches: 1 # 1 means don't accumulate gradients
+  clip_grad_norm: 0 # o means don't clip grdients
+
+hparams:
+  mixmethod:
+    _target_: src.mixmethods.SnapMix
+    alpha: 5.0
+    conf_prob: 1.0
+
+  loss_function:
+    _target_: src.core.LabelSmoothingCrossEntropy
+    eps: 0.1
+
+  learning_rate: 0.01
+  lr_mult: 10
+
+  optimizer:
+    _target_: src.opts.Ranger
+    weight_decay: 0.01
+    betas: (0.9, 0.99)
+    eps: 0.00001
+
+  scheduler:
+    _target_: src.opts.FlatCos
+    num_epochs: ${config.num_epochs}
+    pct_start: 0.7
+
+  metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
+  step_after: step # step or epoch
+  frequency: 1 # scheduler call frequency
+
+save_dir: models/

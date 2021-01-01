@@ -14,6 +14,8 @@ from functools import partial
 from .core import *
 from .layers import *
 from .networks import *
+from .losses import *
+from .opts import *
 
 # Cell
 # from : https://github.com/fastai/fastai/blob/493023513ddd5157647bd10e9cebbbbdc043474c/fastai/layers.py#L582
@@ -36,7 +38,7 @@ class NoneReduce():
 class Mixup():
     "Implements mixup from https://arxiv.org/abs/1710.09412"
     def __init__(self, alpha: float = 0.4):
-        self.distrib = Beta(tensor(alpha), tensor(alpha))
+        self.distrib = alpha
         self.device = None
 
     def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
@@ -44,7 +46,8 @@ class Mixup():
 
         if self.device is None: self.device = xb.device
 
-        self.lam = self.distrib.sample().to(self.device)
+        self.lam = np.random.beta(self.distrib, self.distrib)
+        self.lam = torch.tensor(self.lam, device=self.device)
 
         index = torch.randperm(bs, device=self.device)
         xb = self.lam * xb + (1 - self.lam) * xb[index, :]
@@ -63,7 +66,7 @@ class Cutmix():
     "Implementation of `https://arxiv.org/abs/1905.04899`"
     def __init__(self, alpha: float = 1.0):
         self.device = None
-        self.distrib = Beta(tensor(alpha), tensor(alpha))
+        self.distrib = alpha
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
@@ -84,7 +87,8 @@ class Cutmix():
 
         if self.device is None: self.device = xb.device
 
-        self.lam = self.distrib.sample().to(self.device)
+        self.lam = np.random.beta(self.distrib, self.distrib)
+        self.lam = torch.tensor(self.lam, device=self.device)
 
         index = torch.randperm(bs, device=self.device)
 
@@ -102,15 +106,12 @@ class Cutmix():
         return loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
 
 # Cell
-
 # @TODO: add midlevel classification branch in learning.
 class SnapMix():
     "Implementation of https://arxiv.org/abs/2012.04846"
-    def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0, mid_level:bool = False):
-        self.device = None
-        self.distrib = Beta(tensor(alpha), tensor(alpha))
-        self.conf_prob = conf_prob
-        self.mid_level = mid_level
+    def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0):
+        self.device  = None
+        self.distrib, self.conf_prob = alpha, conf_prob
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
@@ -125,6 +126,7 @@ class SnapMix():
         y1 = torch.clamp(cy - cut_h // 2, 0, H)
         x2 = torch.clamp(cx + cut_w // 2, 0, W)
         y2 = torch.clamp(cy + cut_h // 2, 0, H)
+
         return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
 
 
@@ -141,11 +143,11 @@ class SnapMix():
             clsw = model.fc
 
             weight = clsw.weight.data
-            bias = clsw.bias.data
             weight = weight.view(weight.size(0),weight.size(1),1,1)
+            bias   = clsw.bias.data
 
-            fms = F.relu(fms)
-            poolfea = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
+            fms      = F.relu(fms)
+            poolfea  = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
             clslogit = F.softmax(clsw.forward(poolfea))
 
             logitlist = []
@@ -162,9 +164,11 @@ class SnapMix():
                 evimap = out[i,target[i]]
                 outmaps.append(evimap)
 
-            outmaps = torch.stack(outmaps)
-            outmaps = outmaps.view(outmaps.size(0),1,outmaps.size(1),outmaps.size(2))
-            outmaps = F.interpolate(outmaps, img_size, mode='bilinear', align_corners=False)
+            if img_size is not None:
+                outmaps = torch.stack(outmaps)
+                outmaps = outmaps.view(outmaps.size(0),1,outmaps.size(1),outmaps.size(2))
+                outmaps = F.interpolate(outmaps, img_size, mode='bilinear', align_corners=False)
+
             outmaps = outmaps.squeeze()
 
             for i in range(bs):
@@ -173,13 +177,12 @@ class SnapMix():
 
         return outmaps, clslogit
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:SnapMixTransferLearningModel=None):
+    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model: SnapMixTransferLearningModel):
         bs, _, H, W = xb.size()
 
         self.img_size = (H,W)
 
-        if self.device is None:
-            self.device = xb.device
+        if self.device is None: self.device = xb.device
 
         r = np.random.rand(1)
 
@@ -193,10 +196,15 @@ class SnapMix():
 
         if r < self.conf_prob:
             wfmaps,_  = self.get_spm(xb, yb, model)
-            lam  = self.distrib.sample().to(self.device)
-            lam1 = self.distrib.sample().to(self.device)
+
+            lam = np.random.beta(self.distrib, self.distrib)
+            lam = torch.tensor(lam, device=self.device)
+
+            lam1 = np.random.beta(self.distrib, self.distrib)
+            lam1 = torch.tensor(lam1, device=self.device)
 
             rand_index = torch.randperm(bs, device=self.device)
+
             wfmaps_b = wfmaps[rand_index,:,:]
             self.yb1 = self.yb[rand_index]
 
@@ -225,21 +233,13 @@ class SnapMix():
                 lam_a[torch.isnan(lam_a)] = lam
                 lam_b[torch.isnan(lam_b)] = 1-lam
 
-        # store attributes
         self.yb1, self.yb2 = self.yb, self.yb1
         self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
         self.model, self.xb = model, xb
         return self.xb
 
-    def generate_mid_level_output(self):
-        pass
-
-
     def loss(self, lf, pred, *args, **kwargs):
         loss_a = lf(pred, self.yb1)
         loss_b = lf(pred, self.yb2)
         loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
-
-        if self.mid_level:
-            pass
         return loss

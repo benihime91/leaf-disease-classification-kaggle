@@ -5,6 +5,6 @@ model:
   pretrained: True
 
 transfer_learning_model:
-  _target_: src.networks.SnapMixTransferLearningModelBasic
+  _target_: src.networks.SnapMixTransferLearningModel
   cut: -2
   c: 5
