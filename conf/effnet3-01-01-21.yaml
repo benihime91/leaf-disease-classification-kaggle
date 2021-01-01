@@ -25,7 +25,7 @@ config:
   num_epochs: 40
   batch_size: 64
   accumulate_batches: 1 # 1 means don't accumulate gradients
-  clip_grad_norm: 0 # o means don't clip grdients
+  clip_grad_norm: 0.1 # o means don't clip grdients
 
 hparams:
   mixmethod:
