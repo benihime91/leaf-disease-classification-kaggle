@@ -32,8 +32,8 @@ train:
 
 valid:
   - _target_: albumentations.CenterCrop
-    height: 350
-    width: 350
+    height: 480
+    width: 480
 
   - _target_: albumentations.Resize
     height: ${image_dims}

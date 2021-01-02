@@ -1,30 +1,30 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - augmentation: light_augs_resnet50_224
+  - augmentation: light_augs_resnet50_512
   - trainer: default
   - networks: snapmix
   - mixmethods: snapmix
   - losses: labelsmoothing
   - activation: relu
   - optimizers: sgdnesterov
-  - schedulers: multistep_resnet50_512
+  - schedulers: sgdr
   - general: qblocks
 
 curr_fold: 0
 image_dir: '/home/qblocks/train_images'
 csv_path: '/home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv'
 
-encoder: resnet50
+encoder: resnext50_32x4d
 
 accumulate_batches: 1
 clip_grad_norm: 0
 
-image_dims: 224
-num_epochs: 10
-batch_size: 360
+image_dims: 512
+num_epochs: 15
+batch_size: 64
 
 learning_rate: 0.1
-lr_mult: 10
+lr_mult: 100
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
 scheduler_interval: epoch # step or epoch
