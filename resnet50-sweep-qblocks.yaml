@@ -1,75 +1,28 @@
 program: hydra_run.py
 
+description: resnet50-sweep
+
 method: bayes
+
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--config-name"
+  - "resnet50-sweep-qblocks"
+  - ${args_no_hyphens}
 
 metric:
   goal: maximize
-  name: val/acc
+  name: 'valid/acc'
 
 parameters:
-  optimizer:
-    values:
-      - sgdnesterov
-      - adamw
+  optimizers:
+    values: ['sgdnesterov', 'adamw']
     distribution: categorical
-
-  scheduler:
-    values:
-      - cosineannealingwarmup
-      - sgdr-resnet50-sweep
+  schedulers:
+    values: ['cosineannealingwarmup', 'sgdr-resnet50-sweep']
     distribution: categorical
-
   losses:
-    values:
-      - crossentropy
-      - labelsmoothing
+    values: ['crossentropy', 'labelsmoothing']
     distribution: categorical
-
-  scheduler_interval:
-    values: step
-    distribution: categorical
-
-  epochs:
-    num_epochs: 20
-    distribution: int_uniform
-
-  learning_rate:
-    values: 0.1
-    distribution: uniform
-    
-  image_dims:
-    values: 224
-    distribution: int_uniform
-
-  batch_size:
-    values: 128
-    distribution: int_uniform
-
-  general:
-    values: default
-    distribution: categorical
-
-  augmentation:
-    values: light_augs_resnet50_224
-    distribution: categorical
-    
-  image_dir: 
-     values: /home/qblocks/train_images
-     distribution: categorical
-  
-  csv_path: 
-     values: /home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
-     distribution: categorical
-
-early_terminate:
-  type: hyperband
-  s: 2
-  eta: 3
-  max_iter: 20
-
-command:
-  - python
-  - ${program}
-  - "--config-name"
-  - 02-01-2020-resnet50-sweep-kaggle.yaml
-  - ${args_no_hyphens}
