@@ -9,7 +9,7 @@ defaults:
   - activation: relu
   - optimizers: sgdnesterov
   - schedulers: multistep_resnet50_512
-  - general: default
+  - general: kaggle
 
 curr_fold: 0
 image_dir: '/home/qblocks/train_images'
@@ -21,8 +21,8 @@ accumulate_batches: 1
 clip_grad_norm: 0
 
 image_dims: 224
-num_epochs: 20
-batch_size: 128
+num_epochs: 12
+batch_size: 320
 
 learning_rate: 0.1
 lr_mult: 10
