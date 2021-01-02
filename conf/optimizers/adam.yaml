@@ -1,2 +1,8 @@
 # @package optimizer
 _target_: torch.optim.Adam
+weight_decay: 0.000001
+betas:
+  - .9
+  - 0.999
+eps: 0.00000001
+amsgrad: false

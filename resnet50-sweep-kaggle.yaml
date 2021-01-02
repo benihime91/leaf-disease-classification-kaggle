@@ -1,0 +1,54 @@
+program: hydra_run.py
+
+method: bayes
+
+metric:
+  goal: maximize
+  name: val/acc
+
+parameters:
+  optimizer:
+    values:
+      - sgdnesterov
+      - adamw
+
+  scheduler:
+    values:
+      - cosineannealingwarmup
+      - sgdr-resnet50-sweep
+
+  losses:
+    values:
+      - crossentropy
+      - labelsmoothing
+
+  scheduler_interval:
+    values: step
+
+  epochs:
+    num_epochs: 10
+
+  learning_rate:
+    values: 0.1
+
+  image_dims:
+    values: 224
+
+  batch_size:
+    values: 128
+
+  augmentation:
+    values: light_augs_resnet50_224
+
+early_terminate:
+  type: hyperband
+  s: 2
+  eta: 3
+  max_iter: 10
+
+command:
+  - python
+  - ${program}
+  - "--config-name"
+  - 02-01-2020-resnet50-sweep-kaggle.yaml
+  - ${args_no_hyphens}
