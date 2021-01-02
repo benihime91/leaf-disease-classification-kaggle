@@ -1,0 +1,47 @@
+# @package augmentations
+train:
+  - _target_: albumentations.RandomSizedCrop
+    min_max_height:
+      - 350
+      - 350
+    height: ${image_dims}
+    width: ${image_dims}
+    p: 1.0
+
+  - _target_: albumentations.Resize
+    height: ${image_dims}
+    width: ${image_dims}
+    p: 1.0
+
+  - _target_: albumentations.HorizontalFlip
+    p: 0.5
+
+  - _target_: albumentations.ShiftScaleRotate
+    rotate_limit: 45
+    p: 0.5
+
+  - _target_: albumentations.RandomBrightness
+    p: 0.5
+    limit: 0.1
+
+  - _target_: albumentations.Normalize
+    p: 1.0
+
+  - _target_: albumentations.pytorch.transforms.ToTensorV2
+    p: 1.0
+
+valid:
+  - _target_: albumentations.CenterCrop
+    height: 350
+    width: 350
+
+  - _target_: albumentations.Resize
+    height: ${image_dims}
+    width: ${image_dims}
+    p: 1.0
+
+  - _target_: albumentations.Normalize
+    p: 1.0
+
+  - _target_: albumentations.pytorch.transforms.ToTensorV2
+    p: 1.0
