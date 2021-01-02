@@ -1,5 +1,4 @@
 # @package scheduler
 _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
-T_0: 30
+T_0: 100
 T_mult: 1
-eta_min: 0
