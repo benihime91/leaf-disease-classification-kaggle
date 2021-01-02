@@ -49,7 +49,7 @@ def cli_main(args: DictConfig):
     )
 
     # modify activations if activation is other than ReLU
-    if args.activation.__target__ != "torch.nn.ReLU":
+    if args.activation._target_ != "torch.nn.ReLU":
         replace_activs(NETWORK.encoder, func=ACTIVATION_FUNC)
 
     # init the weights of the final untrained layer
