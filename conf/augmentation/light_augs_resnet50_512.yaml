@@ -1,8 +1,8 @@
 # @package augmentations
 train:
   - _target_: albumentations.RandomResizedCrop
-    height: 700
-    width: 525
+    height: ${image_dims}
+    width: ${image_dims}
     p: 1.0
 
   - _target_: albumentations.Resize
@@ -25,8 +25,8 @@ train:
 
 valid:
   - _target_: albumentations.CenterCrop
-    height: 700
-    width: 525
+    height: ${image_dims}
+    width: ${image_dims}
 
   - _target_: albumentations.Resize
     height: ${image_dims}
