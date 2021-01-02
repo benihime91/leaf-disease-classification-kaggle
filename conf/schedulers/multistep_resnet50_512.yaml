@@ -1,3 +1,4 @@
+# @package scheduler
 _target_: torch.optim.lr_scheduler.MultiStepLR
 milestones:
   - 2
