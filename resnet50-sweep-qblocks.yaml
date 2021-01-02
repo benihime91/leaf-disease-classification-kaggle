@@ -30,7 +30,7 @@ parameters:
     distribution: categorical
 
   epochs:
-    num_epochs: 10
+    num_epochs: 20
     distribution: int_uniform
 
   learning_rate:
@@ -45,15 +45,27 @@ parameters:
     values: 128
     distribution: int_uniform
 
+  general:
+    values: default
+    distribution: categorical
+
   augmentation:
     values: light_augs_resnet50_224
     distribution: categorical
+    
+  image_dir: 
+     values: /home/qblocks/train_images
+     distribution: categorical
+  
+  csv_path: 
+     values: /home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+     distribution: categorical
 
 early_terminate:
   type: hyperband
   s: 2
   eta: 3
-  max_iter: 10
+  max_iter: 20
 
 command:
   - python
