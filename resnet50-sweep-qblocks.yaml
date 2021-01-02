@@ -33,3 +33,11 @@ parameters:
     distribution: categorical
   num_epochs: 
     values: [12]
+  batch_size:
+    values: [320]
+  image_dir: 
+    values: ['/home/qblocks/train_images']
+    distribution: categorical
+  csv_path: 
+    values: ['/home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv']
+    distribution: categorical
