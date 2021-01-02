@@ -1,9 +1,6 @@
 # @package augmentations
 train:
   - _target_: albumentations.RandomSizedCrop
-    min_max_height:
-      - 700
-      - 525
     height: 700
     width: 525
     p: 1.0
