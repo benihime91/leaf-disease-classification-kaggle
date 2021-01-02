@@ -32,9 +32,9 @@ parameters:
     values: ['step']
     distribution: categorical
   num_epochs: 
-    values: [12]
+    values: [5]
   batch_size:
-    values: [320]
+    values: [64]
   image_dir: 
     values: ['/home/qblocks/train_images']
     distribution: categorical
