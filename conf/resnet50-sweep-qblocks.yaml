@@ -9,7 +9,7 @@ defaults:
   - activation: relu
   - optimizers: sgdnesterov
   - schedulers: multistep_resnet50_512
-  - general: kaggle
+  - general: qblocks
 
 curr_fold: 0
 image_dir: '/home/qblocks/train_images'
@@ -27,4 +27,4 @@ batch_size: 320
 learning_rate: 0.1
 lr_mult: 10
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
-scheduler_interval: step # step or epoch
+scheduler_interval: epoch # step or epoch
