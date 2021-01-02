@@ -7,7 +7,7 @@ defaults:
   - mixmethods: snapmix
   - losses: labelsmoothing
   - activation: relu
-  - optimizers: sgdnesterov
+  - optimizers: adamw
   - schedulers: sgdr
   - general: qblocks
 
@@ -18,13 +18,13 @@ csv_path: '/home/qblocks/leaf-disease-classification-kaggle/data/stratified-data
 encoder: resnext50_32x4d
 
 accumulate_batches: 1
-clip_grad_norm: 0
+clip_grad_norm: 0.5
 
 image_dims: 512
-num_epochs: 15
+num_epochs: 10
 batch_size: 64
 
 learning_rate: 0.1
-lr_mult: 100
+lr_mult: 10
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
-scheduler_interval: epoch # step or epoch
+scheduler_interval: step # step or epoch
