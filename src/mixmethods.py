@@ -37,36 +37,50 @@ class NoneReduce():
 # modified from : https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
 class Mixup():
     "Implements mixup from https://arxiv.org/abs/1710.09412"
-    def __init__(self, alpha: float = 0.4):
+    def __init__(self, alpha: float = 0.4, conf_prob=1.0):
         self.distrib = alpha
         self.device = None
+        self.conf_prob = conf_prob
+        self.is_active = False
 
     def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
-        bs = xb.size()[0]
+        r = np.random.rand(1)
+        self.yb1 = yb
 
-        if self.device is None: self.device = xb.device
+        if r < self.conf_prob:
+            self.is_active = True
+            bs = xb.size()[0]
 
-        self.lam = np.random.beta(self.distrib, self.distrib)
-        self.lam = torch.tensor(self.lam, device=self.device)
+            if self.device is None: self.device = xb.device
 
-        index = torch.randperm(bs, device=self.device)
-        xb = self.lam * xb + (1 - self.lam) * xb[index, :]
-        self.yb1, self.yb2 = yb, yb[index]
+            self.lam = np.random.beta(self.distrib, self.distrib)
+            self.lam = torch.tensor(self.lam, device=self.device)
+
+            index = torch.randperm(bs, device=self.device)
+            xb = self.lam * xb + (1 - self.lam) * xb[index, :]
+            self.yb1, self.yb2 = yb, yb[index]
+        else:
+            self.is_active = False
         return xb
 
     def loss(self, lf, pred, reduction='mean'):
         self.old_lf = lf
-        with NoneReduce(self.old_lf) as lf:
-            loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
-        return loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
+        if self.is_active:
+            with NoneReduce(self.old_lf) as lf:
+                loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
+                loss = loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
+        if not self.is_active:
+            loss = self.old_lf(pred, self.yb1)
 
 # Cell
 #modified from : https://github.com/clovaai/CutMix-PyTorch/blob/master/train.py
 class Cutmix():
     "Implementation of `https://arxiv.org/abs/1905.04899`"
-    def __init__(self, alpha: float = 1.0):
+    def __init__(self, alpha: float = 1.0, conf_prob=1.0):
         self.device = None
         self.distrib = alpha
+        self.is_active = False
+        self.conf_prob = conf_prob
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
@@ -83,27 +97,39 @@ class Cutmix():
         return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
 
     def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
-        bs, _, H, W = xb.size()
+        r = np.random.rand(1)
+        self.yb1 = yb
 
-        if self.device is None: self.device = xb.device
+        if r < self.conf_prob:
+            self.is_active = True
 
-        self.lam = np.random.beta(self.distrib, self.distrib)
-        self.lam = torch.tensor(self.lam, device=self.device)
+            bs, _, H, W = xb.size()
 
-        index = torch.randperm(bs, device=self.device)
+            if self.device is None: self.device = xb.device
 
-        self.yb1, self.yb2 = yb, yb[index]
-        x1, y1, x2, y2 = self.rand_bbox(W, H, self.lam)
-        xb[:, :, x1:x2, y1:y2] = xb[index, :, x1:x2, y1:y2]
-        # adjust lambda to exactly match pixel ratio
-        self.lam = (1 - ((x2-x1)*(y2-y1))/float(W*H)).item()
+            self.lam = np.random.beta(self.distrib, self.distrib)
+            self.lam = torch.tensor(self.lam, device=self.device)
+
+            index = torch.randperm(bs, device=self.device)
+
+            self.yb1, self.yb2 = yb, yb[index]
+            x1, y1, x2, y2 = self.rand_bbox(W, H, self.lam)
+            xb[:, :, x1:x2, y1:y2] = xb[index, :, x1:x2, y1:y2]
+            # adjust lambda to exactly match pixel ratio
+            self.lam = (1 - ((x2-x1)*(y2-y1))/float(W*H)).item()
+        else:
+            self.is_active = False
         return xb
 
     def loss(self, lf, pred, reduction='mean'):
         self.old_lf = lf
-        with NoneReduce(self.old_lf) as lf:
-            loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
-        return loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
+        if self.is_active:
+            with NoneReduce(self.old_lf) as lf:
+                loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
+                loss = loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
+        if not self.is_active:
+            loss = self.old_lf(pred, self.yb1)
+            return loss
 
 # Cell
 # @TODO: add midlevel classification branch in learning.
@@ -112,6 +138,7 @@ class SnapMix():
     def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0):
         self.device  = None
         self.distrib, self.conf_prob = alpha, conf_prob
+        self.is_active = False
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1. - lam)
@@ -178,23 +205,29 @@ class SnapMix():
         return outmaps, clslogit
 
     def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model: SnapMixTransferLearningModel):
-        bs, _, H, W = xb.size()
-
-        self.img_size = (H,W)
-
-        if self.device is None: self.device = xb.device
-
         r = np.random.rand(1)
-
-        lam_a = torch.ones(xb.size(0), device=self.device)
-        lam_b = 1 - lam_a
-
-        self.yb  = yb
-        self.yb1 = yb.clone()
-
-        rand_index = torch.randperm(bs, device=self.device)
+        self.xb  = xb
+        self.yb1 = yb
 
         if r < self.conf_prob:
+            self.is_active = True
+
+            bs, _, H, W = xb.size()
+
+            self.img_size = (H,W)
+
+            if self.device is None:
+                self.device = xb.device
+
+            lam_a = torch.ones(xb.size(0), device=self.device)
+            lam_b = 1 - lam_a
+
+            self.yb  = yb
+            self.yb1 = yb.clone()
+
+            rand_index = torch.randperm(bs, device=self.device)
+
+
             wfmaps,_  = self.get_spm(xb, yb, model)
 
             lam = np.random.beta(self.distrib, self.distrib)
@@ -233,13 +266,18 @@ class SnapMix():
                 lam_a[torch.isnan(lam_a)] = lam
                 lam_b[torch.isnan(lam_b)] = 1-lam
 
-        self.yb1, self.yb2 = self.yb, self.yb1
-        self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
-        self.model, self.xb = model, xb
+            self.yb1, self.yb2 = self.yb, self.yb1
+            self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
+            self.model, self.xb = model, xb
+        else:
+            self.is_active = False
         return self.xb
 
     def loss(self, lf, pred, *args, **kwargs):
-        loss_a = lf(pred, self.yb1)
-        loss_b = lf(pred, self.yb2)
-        loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+        if self.is_active:
+            loss_a = lf(pred, self.yb1)
+            loss_b = lf(pred, self.yb2)
+            loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+        if not self.is_active:
+            loss = lf(pred, self.yb1)
         return loss
