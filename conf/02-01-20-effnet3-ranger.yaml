@@ -4,21 +4,21 @@ defaults:
   - augmentation: light_augs_resnet50_512
   - networks: snapmix
   - mixmethods: snapmix
-  - optimizers: sgd-nesterov
-  - schedulers: sgdr
+  - optimizers: ranger
+  - schedulers: flatcos
   - activation: relu
   - losses: labelsmoothing
   - general: kaggle
   - trainer: default
 
 curr_fold: 0
-image_dir: /kaggle/input/cassava-leaf-disease-classification/train_images/
-csv_path: /kaggle/working/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+image_dir: ${general.image_dir}
+csv_path: ${general.csv_path}
 
 encoder: tf_efficientnet_b3_ns
 
 accumulate_batches: 1
-clip_grad_norm: 0
+clip_grad_norm: 0.5
 
 image_dims: 512
 num_epochs: 15

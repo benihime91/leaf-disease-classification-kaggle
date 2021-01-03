@@ -3,3 +3,5 @@ unique_idx: null # a unique id for the experiment if None, then generates one ra
 project_name: kaggle-leaf-disease-hydra-cli # wandb project name
 random_seed: 42 # random seed for the expeiment
 save_dir: /home/qblocks/models/ # where to save the trained model weights
+image_dir: /home/qblocks/train_images
+csv_path: /home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
