@@ -18,7 +18,7 @@ csv_path: /kaggle/working/leaf-disease-classification-kaggle/data/stratified-dat
 encoder: seresnext50_32x4d
 
 accumulate_batches: 1
-clip_grad_norm: 0.5
+clip_grad_norm: 0.1
 
 image_dims: 512
 num_epochs: 12
