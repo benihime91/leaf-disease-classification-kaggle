@@ -75,12 +75,7 @@ def cli_main(args: DictConfig):
         pl.callbacks.LearningRateMonitor(args.scheduler_interval),
     ]
 
-    CHECKPOINT_CB = ModelCheckpoint(
-        monitor="valid/acc",
-        save_top_k=1,
-        mode="max",
-        filename=os.path.join(args.general.save_dir, MODEL_NAME),
-    )
+    CHECKPOINT_CB = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
 
     LOGGER = WandbLogger(project=args.general.project_name, log_model=True)
 
@@ -95,8 +90,10 @@ def cli_main(args: DictConfig):
     trainer.fit(LIGHTNING_MODEL, datamodule=DATAMODULE)
 
     # Testing Stage
+    ckpt_path = trainer.checkpoint_callback.best_model_path
+
     results = trainer.test(
-        LIGHTNING_MODEL, datamodule=DATAMODULE, ckpt_path="best", verbose=False
+        LIGHTNING_MODEL, datamodule=DATAMODULE, ckpt_path=ckpt_path, verbose=False
     )
 
     # create model save dir
