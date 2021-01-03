@@ -27,10 +27,6 @@ train:
     p: 1.0
 
 valid:
-  - _target_: albumentations.CenterCrop
-    height: ${image_dims}
-    width: ${image_dims}
-
   - _target_: albumentations.Resize
     height: ${image_dims}
     width: ${image_dims}
