@@ -1,6 +1,6 @@
 # @package scheduler
 _target_: torch.optim.lr_scheduler.MultiStepLR
 milestones:
-  - 20
-  - 32
+  - 3
+  - 13
 gamma: 0.1

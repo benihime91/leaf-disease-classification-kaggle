@@ -1,6 +1,6 @@
 # @package optimizer
 _target_: torch.optim.AdamW
-weight_decay: 0.1
+weight_decay: 0.01
 betas:
   - .9
   - 0.99
