@@ -5,7 +5,7 @@ defaults:
   - networks: snapmix
   - mixmethods: snapmix
   - optimizers: adamw
-  - schedulers: sgdr
+  - schedulers: multistep-baseline
   - activation: relu
   - losses: labelsmoothing
   - general: kaggle
@@ -27,4 +27,4 @@ batch_size: 32
 learning_rate: 0.1
 lr_mult: 10
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
-scheduler_interval: step # step or epoch
+scheduler_interval: epoch # step or epoch
