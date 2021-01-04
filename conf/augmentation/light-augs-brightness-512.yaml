@@ -17,7 +17,7 @@ train:
     brightness_limit:
       - -0.1
       - 0.1
-    contrast_limit: ${image_dims}
+    contrast_limit:
       - -0.1
       - 0.1
     p: 1.0
