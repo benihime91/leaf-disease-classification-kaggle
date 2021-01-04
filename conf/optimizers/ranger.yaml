@@ -8,5 +8,5 @@ gc_conv_only: false
 weight_decay: 0.01
 betas:
   - .95
-  - 0.999
-eps: 0.00001
+  - 0.99
+eps: 1e-06

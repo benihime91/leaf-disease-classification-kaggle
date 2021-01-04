@@ -1,7 +1,7 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - augmentation: light-augs-center-crop-512
+  - augmentation: light-augs-brightness-512
   - networks: snapmix
   - mixmethods: snapmix-half-prob
   - optimizers: ranger
