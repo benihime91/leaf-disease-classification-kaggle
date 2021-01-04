@@ -12,8 +12,8 @@ defaults:
   - general: qblocks
 
 curr_fold: 0
-image_dir: '/home/qblocks/train_images'
-csv_path: '/home/qblocks/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv'
+image_dir: ${general.image_dir}
+csv_path: ${general.csv_path}
 
 encoder: resnext50_32x4d
 

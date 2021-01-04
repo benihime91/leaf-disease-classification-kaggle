@@ -12,8 +12,8 @@ defaults:
   - general: kaggle
 
 curr_fold: 0
-image_dir: /kaggle/input/cassava-leaf-disease-classification/train_images/
-csv_path: /kaggle/working/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv
+image_dir: ${general.image_dir}
+csv_path: ${general.csv_path}
 
 encoder: resnet50
 accumulate_batches: 1
