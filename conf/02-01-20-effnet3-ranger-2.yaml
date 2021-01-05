@@ -25,6 +25,6 @@ num_epochs: 15
 batch_size: 32
 
 learning_rate: 0.1
-lr_mult: 10
+lr_mult: 100
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
 scheduler_interval: step # step or epoch
