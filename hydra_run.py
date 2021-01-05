@@ -96,7 +96,7 @@ def cli_main(args: DictConfig):
 
     del LIGHTNING_MODEL
 
-    LIGHTNING_MODEL = LightningCassava.load_from_checkpoint(ckpt_path, conf=args)
+    LIGHTNING_MODEL = LightningCassava.load_from_checkpoint(ckpt_path)
 
     # create model save dir
     os.makedirs(args.general.save_dir, exist_ok=True)
