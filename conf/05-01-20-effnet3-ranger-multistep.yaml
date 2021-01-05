@@ -5,7 +5,7 @@ defaults:
   - networks: snapmix
   - mixmethods: snapmix
   - optimizers: ranger
-  - schedulers: flatcos
+  - schedulers: multistep
   - activation: relu
   - losses: labelsmoothing
   - general: kaggle
@@ -21,10 +21,10 @@ accumulate_batches: 1
 clip_grad_norm: 0
 
 image_dims: 512
-num_epochs: 15
+num_epochs: 10
 batch_size: 32
 
-learning_rate: 0.1
-lr_mult: 10
+learning_rate: 8e-02
+lr_mult: 100
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
-scheduler_interval: step # step or epoch
+scheduler_interval: epoch # step or epoch
