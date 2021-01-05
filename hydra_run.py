@@ -90,11 +90,12 @@ def cli_main(args: DictConfig):
     trainer.fit(LIGHTNING_MODEL, datamodule=DATAMODULE)
 
     # Testing Stage
-    ckpt_path = CHECKPOINT_CB.best_model_path
-
     _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=True)
 
     del LIGHTNING_MODEL
+
+    # Laod in the best checkpoint and save the model weights
+    ckpt_path = CHECKPOINT_CB.best_model_path
 
     LIGHTNING_MODEL = LightningCassava.load_from_checkpoint(ckpt_path, model=NETWORK)
     log.info(f"Best weights loaded from checkpoint : {ckpt_path}")
