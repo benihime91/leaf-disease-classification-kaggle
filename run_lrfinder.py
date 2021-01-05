@@ -68,10 +68,9 @@ def cli_main(args: DictConfig):
     fig = lr_finder.plot(suggest=True)
 
     PATH = "lr_finder_resuts.png"
-    plt.savefig(PATH)
-    plt.close(fig)
+    fig.savefig(PATH)
 
-    log.info(f"Suggested LR's : {lr_finder.results}")
+    log.info(f"Suggested LR's : {lr_finder.suggestion()}")
     log.info(f"Results saved to {PATH}")
 
     log.info("Cleaning up .... ")
