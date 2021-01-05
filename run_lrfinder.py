@@ -4,22 +4,15 @@ import os
 
 import albumentations as A
 import hydra
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import torch
-import wandb
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import WandbLogger
 
 from src.core import generate_random_id
 from src.layers import apply_init, replace_activs
-from src.lightning.callbacks import (
-    LitProgressBar,
-    PrintLogsCallback,
-    WandbImageClassificationCallback,
-)
 from src.lightning.core import CassavaLightningDataModule, LightningCassava
 
 log = logging.getLogger(__name__)
@@ -67,47 +60,18 @@ def cli_main(args: DictConfig):
         bs=args.batch_size,
     )
 
-    # initialize pytorch_lightning Trainer + Callbacks
-    CALLBACKS = [
-        WandbImageClassificationCallback(log_conf_mat=True),
-        LitProgressBar(),
-        PrintLogsCallback(logger=log),
-        pl.callbacks.LearningRateMonitor(args.scheduler_interval),
-    ]
+    trainer: Trainer = instantiate(args.trainer,)
 
-    CHECKPOINT_CB = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
+    # Run learning rate finder
+    lr_finder = trainer.tuner.lr_find(LIGHTNING_MODEL, datamodule=DATAMODULE)
 
-    LOGGER = WandbLogger(project=args.general.project_name, log_model=True)
+    fig = lr_finder.plot(suggest=True)
 
-    trainer: Trainer = instantiate(
-        args.trainer,
-        checkpoint_callback=CHECKPOINT_CB,
-        callbacks=CALLBACKS,
-        logger=LOGGER,
-    )
+    PATH = "lr_finder_resuts.png"
+    plt.imsave(PATH, fig)
 
-    # Start Train + Validation
-    trainer.fit(LIGHTNING_MODEL, datamodule=DATAMODULE)
-
-    # Testing Stage
-    ckpt_path = CHECKPOINT_CB.best_model_path
-
-    _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=True)
-
-    del LIGHTNING_MODEL
-
-    LIGHTNING_MODEL = LightningCassava.load_from_checkpoint(ckpt_path, model=NETWORK)
-    log.info(f"Best weights loaded from checkpoint : {ckpt_path}")
-
-    # create model save dir
-    os.makedirs(args.general.save_dir, exist_ok=True)
-    PATH = os.path.join(args.general.save_dir, f"{MODEL_NAME}.pt")
-
-    # save the weights of the model
-    LIGHTNING_MODEL.save_model_weights(PATH)
-
-    # upload trained weights to wandb
-    wandb.save(PATH)
+    log.info(f"Suggested LR's : {lr_finder.results}")
+    log.info(f"Results saved to {PATH}")
 
     log.info("Cleaning up .... ")
 
