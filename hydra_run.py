@@ -92,12 +92,12 @@ def cli_main(args: DictConfig):
     # Testing Stage
     _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=True)
 
-    del LIGHTNING_MODEL
-
     # Laod in the best checkpoint and save the model weights
     ckpt_path = CHECKPOINT_CB.best_model_path
 
-    LIGHTNING_MODEL = LightningCassava.load_from_checkpoint(ckpt_path, model=NETWORK)
+    # load in the best model weights
+    CHECKPOINT = torch.load(ckpt_path)
+    LIGHTNING_MODEL.load_state_dict(CHECKPOINT["state_dict"])
     log.info(f"Best weights loaded from checkpoint : {ckpt_path}")
 
     # create model save dir
