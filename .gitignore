@@ -16,7 +16,9 @@ nbs/lightning_logs/
 lightning_logs/
 models
 nbs/kaggle-leaf-disease-fastai-runs
-docs
+nbs/experiments
+nbs/initials
+docs/
 
 #lightning checkpoints
 *.ckpt
