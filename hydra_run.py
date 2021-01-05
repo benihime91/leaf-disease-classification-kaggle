@@ -90,11 +90,13 @@ def cli_main(args: DictConfig):
     trainer.fit(LIGHTNING_MODEL, datamodule=DATAMODULE)
 
     # Testing Stage
-    ckpt_path = trainer.checkpoint_callback.best_model_path
+    ckpt_path = CHECKPOINT_CB.best_model_path
 
-    results = trainer.test(
-        LIGHTNING_MODEL, datamodule=DATAMODULE, ckpt_path=ckpt_path, verbose=False
-    )
+    _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=True)
+
+    del LIGHTNING_MODEL
+
+    LIGHTNING_MODEL = LightningCassava.load_from_checkpoint(ckpt_path, conf=args)
 
     # create model save dir
     os.makedirs(args.general.save_dir, exist_ok=True)
