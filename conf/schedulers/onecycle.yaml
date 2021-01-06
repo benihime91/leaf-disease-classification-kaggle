@@ -1,8 +1,12 @@
 # @package scheduler
-_target_: torch.optim.lr_scheduler.OneCycleLR
-pct_start: 0.3
-cycle_momentum: true
-base_momentum: 0.85
-max_momentum: 0.95
-div_factor: 25.0
-epochs: ${num_epochs}
+function:
+  _target_: torch.optim.lr_scheduler.OneCycleLR
+  pct_start: 0.3
+  cycle_momentum: true
+  base_momentum: 0.85
+  max_momentum: 0.95
+  div_factor: 25.0
+  epochs: ${num_epochs}
+metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
+scheduler_interval: step # step or epoch
+

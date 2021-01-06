@@ -1,15 +1,15 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - augmentation: light_augs_resnet50_512
-  - trainer: default
+  - augmentation: light-augs-brightness-512
   - networks: snapmix
   - mixmethods: snapmix
-  - losses: labelsmoothing
+  - optimizers: ranger
+  - schedulers: flatcos
   - activation: relu
-  - optimizers: adamw
-  - schedulers: sgdr
-  - general: qblocks
+  - losses: labelsmoothing
+  - general: kaggle
+  - trainer: default
 
 curr_fold: 0
 image_dir: ${general.image_dir}
@@ -18,13 +18,11 @@ csv_path: ${general.csv_path}
 encoder: resnext50_32x4d
 
 accumulate_batches: 1
-clip_grad_norm: 0.5
+clip_grad_norm: 1.0
 
 image_dims: 512
 num_epochs: 10
-batch_size: 64
+batch_size: 32
 
-learning_rate: 0.1
-lr_mult: 10
-metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
-scheduler_interval: step # step or epoch
+learning_rate: 0.01
+lr_mult: 100

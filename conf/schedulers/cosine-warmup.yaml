@@ -1,4 +1,7 @@
 # @package scheduler
-_target_: src.opts.CosineAnnealingWarmupScheduler
-pct_start: 0.1
-total_epochs: ${num_epochs}
+function:
+  _target_: src.opts.CosineAnnealingWarmupScheduler
+  pct_start: 0.1
+  total_epochs: ${num_epochs}
+metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
+scheduler_interval: step # step or epoch
