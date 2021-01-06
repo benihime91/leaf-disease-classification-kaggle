@@ -8,8 +8,8 @@ defaults:
   - schedulers: flatcos
   - activation: relu
   - losses: labelsmoothing
-  - general: kaggle
-  - trainer: default
+  - general: default
+  - trainer: fast-dev-cpu
 
 curr_fold: 0
 image_dir: ${general.image_dir}
@@ -20,7 +20,7 @@ encoder: tf_efficientnet_b3_ns
 accumulate_batches: 1
 clip_grad_norm: 1.0
 
-image_dims: 512
+image_dims: 120
 num_epochs: 10
 batch_size: 32
 

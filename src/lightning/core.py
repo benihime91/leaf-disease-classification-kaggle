@@ -80,7 +80,6 @@ class LightningCassava(pl.LightningModule):
         self.model    = model
         self._log     = logging.getLogger(__name__)
         self.accuracy = pl.metrics.Accuracy()
-
         self.save_hyperparameters(conf)
 
         try    : mixmethod = instantiate(self.hparams['mixmethod'])
@@ -163,30 +162,30 @@ class LightningCassava(pl.LightningModule):
 
         opt = instantiate(self.hparams["optimizer"], params=param_list)
 
-        if self.hparams["scheduler"] is not None:
+        if self.hparams["scheduler"]["function"] is not None:
 
-            if self.hparams["scheduler"]["_target_"] == "torch.optim.lr_scheduler.OneCycleLR":
+            if self.hparams["scheduler"]["function"]["_target_"] == "torch.optim.lr_scheduler.OneCycleLR":
                 steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
                 lr_list = [base_lr/self.hparams["lr_mult"], base_lr]
                 kwargs  = dict(optimizer=opt, max_lr=lr_list, steps_per_epoch=steps)
 
-                sch = instantiate(self.hparams["scheduler"], **kwargs)
+                sch = instantiate(self.hparams["scheduler"]["function"], **kwargs)
 
-            elif self.hparams["scheduler"]["_target_"] == "src.opts.FlatCos":
+            elif self.hparams["scheduler"]["function"]["_target_"] == "src.opts.FlatCos":
                 steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
-                sch = instantiate(self.hparams["scheduler"], optimizer=opt, steps_per_epoch=steps)
+                sch = instantiate(self.hparams["scheduler"]["function"], optimizer=opt, steps_per_epoch=steps)
 
-            elif self.hparams["scheduler"]["_target_"] == "src.opts.CosineAnnealingWarmupScheduler":
+            elif self.hparams["scheduler"]["function"]["_target_"] == "src.opts.CosineAnnealingWarmupScheduler":
                 steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
-                sch = instantiate(self.hparams["scheduler"], optimizer=opt, steps_per_epoch=steps)
+                sch = instantiate(self.hparams["scheduler"]["function"], optimizer=opt, steps_per_epoch=steps)
 
             else:
-                sch = instantiate(self.hparams["scheduler"], optimizer=opt)
+                sch = instantiate(self.hparams["scheduler"]["function"], optimizer=opt)
 
             # convert scheduler to lightning format
             sch = {'scheduler': sch,
-                   'monitor'  : self.hparams['metric_to_track'],
-                   'interval' : self.hparams['scheduler_interval'],
+                   'monitor'  : self.hparams["scheduler"]['metric_to_track'],
+                   'interval' : self.hparams["scheduler"]['scheduler_interval'],
                    'frequency': 1}
 
             self._log.info(f"Optimizer: {opt.__class__.__name__}  LR's: {(encoder_lr, base_lr)}")

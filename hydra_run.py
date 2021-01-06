@@ -15,17 +15,11 @@ from pytorch_lightning.loggers import WandbLogger
 
 from src.core import generate_random_id
 from src.layers import apply_init, replace_activs
-from src.lightning.callbacks import (
-    LitProgressBar,
-    PrintLogsCallback,
-    TqdmLoggingHandler,
-    WandbImageClassificationCallback,
-)
+from src.lightning.callbacks import *
+
 from src.lightning.core import CassavaLightningDataModule, LightningCassava
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
-log.addHandler(TqdmLoggingHandler())
 
 
 def cli_main(args: DictConfig):
@@ -75,7 +69,7 @@ def cli_main(args: DictConfig):
         WandbImageClassificationCallback(log_conf_mat=True),
         LitProgressBar(),
         PrintLogsCallback(),
-        pl.callbacks.LearningRateMonitor(args.scheduler_interval),
+        pl.callbacks.LearningRateMonitor(args.scheduler.scheduler_interval),
     ]
 
     CHECKPOINT_CB = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
@@ -93,7 +87,7 @@ def cli_main(args: DictConfig):
     trainer.fit(LIGHTNING_MODEL, datamodule=DATAMODULE)
 
     # Testing Stage
-    _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=True)
+    _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=False)
 
     # Laod in the best checkpoint and save the model weights
     ckpt_path = CHECKPOINT_CB.best_model_path
@@ -129,7 +123,7 @@ def cli_main(args: DictConfig):
         pass
 
 
-@hydra.main(config_path="conf", config_name="example")
+@hydra.main(config_path="conf")
 def cli_hydra(cfg: DictConfig):
     cli_main(cfg)
 
