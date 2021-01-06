@@ -4,8 +4,6 @@ import os
 
 import albumentations as A
 import hydra
-import matplotlib.pyplot as plt
-import pytorch_lightning as pl
 import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
@@ -67,6 +65,10 @@ def cli_main(args: DictConfig):
 
     fig = lr_finder.plot(suggest=True)
 
+    # create directory if does not exists
+    os.makedirs(args.general.save_dir, exist_ok=True)
+
+    # save lr-finder plot to memory
     PATH = os.path.join(args.general.save_dir, f"lr-finder-plot.png")
     fig.savefig(PATH)
 
