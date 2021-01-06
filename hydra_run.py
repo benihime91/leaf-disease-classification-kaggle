@@ -18,11 +18,14 @@ from src.layers import apply_init, replace_activs
 from src.lightning.callbacks import (
     LitProgressBar,
     PrintLogsCallback,
+    TqdmLoggingHandler,
     WandbImageClassificationCallback,
 )
 from src.lightning.core import CassavaLightningDataModule, LightningCassava
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+log.addHandler(TqdmLoggingHandler())
 
 
 def cli_main(args: DictConfig):
@@ -71,7 +74,7 @@ def cli_main(args: DictConfig):
     CALLBACKS = [
         WandbImageClassificationCallback(log_conf_mat=True),
         LitProgressBar(),
-        PrintLogsCallback(logger=log),
+        PrintLogsCallback(),
         pl.callbacks.LearningRateMonitor(args.scheduler_interval),
     ]
 

@@ -64,10 +64,10 @@ class CassavaLightningDataModule(pl.LightningDataModule):
         return DataLoader(self.train_ds, shuffle=True, batch_size=self.bs, num_workers=self.workers)
 
     def val_dataloader(self):
-        return DataLoader(self.valid_ds, batch_size=self.bs, num_workers=self.workers)
+        return DataLoader(self.valid_ds, batch_size=self.bs, num_workers=self.workers, shuffle=False)
 
     def test_dataloader(self):
-        return DataLoader(self.test_ds, batch_size=self.bs, num_workers=self.workers)
+        return DataLoader(self.test_ds, batch_size=self.bs, num_workers=self.workers, shuffle=False)
 
 # Cell
 #TODO: add midlevel classification branch in learning.
@@ -78,7 +78,7 @@ class LightningCassava(pl.LightningModule):
         super().__init__()
 
         self.model    = model
-        self._log  = logging.getLogger(__name__)
+        self._log     = logging.getLogger(__name__)
         self.accuracy = pl.metrics.Accuracy()
 
         self.save_hyperparameters(conf)
@@ -156,9 +156,6 @@ class LightningCassava(pl.LightningModule):
     def configure_optimizers(self):
         base_lr    = self.hparams["learning_rate"]
         encoder_lr = base_lr/self.hparams["lr_mult"]
-
-        steps = len(self.train_dataloader())
-
         param_list = [
             {'params': self.param_list[0], 'lr': encoder_lr},
             {'params': self.param_list[1], 'lr': base_lr}
@@ -169,15 +166,18 @@ class LightningCassava(pl.LightningModule):
         if self.hparams["scheduler"] is not None:
 
             if self.hparams["scheduler"]["_target_"] == "torch.optim.lr_scheduler.OneCycleLR":
+                steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
                 lr_list = [base_lr/self.hparams["lr_mult"], base_lr]
                 kwargs  = dict(optimizer=opt, max_lr=lr_list, steps_per_epoch=steps)
 
                 sch = instantiate(self.hparams["scheduler"], **kwargs)
 
             elif self.hparams["scheduler"]["_target_"] == "src.opts.FlatCos":
+                steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
                 sch = instantiate(self.hparams["scheduler"], optimizer=opt, steps_per_epoch=steps)
 
             elif self.hparams["scheduler"]["_target_"] == "src.opts.CosineAnnealingWarmupScheduler":
+                steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
                 sch = instantiate(self.hparams["scheduler"], optimizer=opt, steps_per_epoch=steps)
 
             else:
@@ -199,15 +199,24 @@ class LightningCassava(pl.LightningModule):
 
     @property
     def param_list(self):
+        "returns the list of parameters [params of encoder, params of fc]"
         param_list = [params(self.model.encoder), params(self.model.fc)]
         return param_list
 
+    def load_state_from_checkpoint(self, path:str):
+        "loads in the weights of the LightningModule from given checkpoint"
+        checkpoint = torch.load(path, map_location=self.device)
+        self.load_state_dict(checkpoint['state_dict'])
+        self._log.info(f"Weights loaded from checkpoint : {path}")
+
     def save_model_weights(self, path:str):
+        "saves weights of self.model"
         state = self.model.state_dict()
         torch.save(state, path)
         self._log.info(f'weights saved to {path}')
 
     def load_model_weights(self, path:str):
+        "loads weights of self.model"
         state_dict = torch.load(path)
         self.model.load_state_dict(state_dict)
         self._log.info(f'weights loaded from {path}')
