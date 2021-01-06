@@ -2,6 +2,6 @@
 function:
   _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
   T_0: 10
-  T_mult: 1
+  T_mult: 2
 metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
 scheduler_interval: step # step or epoch

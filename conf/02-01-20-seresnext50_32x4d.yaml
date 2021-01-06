@@ -1,13 +1,13 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - augmentation: light-augs-brightness-512
-  - networks: snapmix
-  - mixmethods: snapmix
-  - optimizers: ranger
-  - schedulers: flatcos
+  - augmentations: light-augs-brightness-512
+  - network: snapmix
+  - mixmethod: snapmix
+  - optimizer: ranger
+  - scheduler: flatcos
   - activation: relu
-  - losses: labelsmoothing
+  - loss: labelsmoothing
   - general: kaggle
   - trainer: default
 
