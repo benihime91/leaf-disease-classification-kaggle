@@ -26,3 +26,7 @@ batch_size: 32
 
 learning_rate: 5e-03
 lr_mult: 100
+
+hydra:
+  run:
+    dir: ${general.save_dir}
