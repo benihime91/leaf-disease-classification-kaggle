@@ -86,11 +86,13 @@ def cli_main(args: DictConfig):
     # Start Train + Validation
     trainer.fit(LIGHTNING_MODEL, datamodule=DATAMODULE)
 
-    # Testing Stage
-    _ = trainer.test(LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=False)
-
     # Laod in the best checkpoint and save the model weights
     ckpt_path = CHECKPOINT_CB.best_model_path
+
+    # Testing Stage
+    _ = trainer.test(
+        LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=False, ckpt_path=ckpt_path
+    )
 
     # load in the best model weights
     CHECKPOINT = torch.load(ckpt_path)
