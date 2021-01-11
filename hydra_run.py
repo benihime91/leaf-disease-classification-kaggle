@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 import torch
 import wandb
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -16,7 +16,6 @@ from pytorch_lightning.loggers import WandbLogger
 from src.core import generate_random_id
 from src.layers import apply_init, replace_activs
 from src.lightning.callbacks import *
-
 from src.lightning.core import CassavaLightningDataModule, LightningCassava
 
 log = logging.getLogger(__name__)
@@ -108,6 +107,13 @@ def cli_main(args: DictConfig):
     wandb.save(PATH)
 
     log.info("Cleaning up .... ")
+
+    try:
+        conf_path = os.path.join(args.general.save_dir, "configFile.yaml")
+        OmegaConf.save(args, f=conf_path)
+        wandb.save(conf_path)
+    except:
+        pass
 
     # clean up and free memory
     try:
