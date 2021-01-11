@@ -90,9 +90,7 @@ def cli_main(args: DictConfig):
     ckpt_path = CHECKPOINT_CB.best_model_path
 
     # Testing Stage
-    _ = trainer.test(
-        LIGHTNING_MODEL, datamodule=DATAMODULE, verbose=False, ckpt_path=ckpt_path
-    )
+    _ = trainer.test(datamodule=DATAMODULE, verbose=False, ckpt_path=ckpt_path)
 
     # load in the best model weights
     CHECKPOINT = torch.load(ckpt_path)
