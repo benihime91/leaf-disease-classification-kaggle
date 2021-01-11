@@ -1,3 +1,4 @@
+# @package loss
 _target_: src.losses.BiTemperedLogisticLoss
 eps: 0.1
 t1: 0.6
