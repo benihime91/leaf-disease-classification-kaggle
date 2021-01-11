@@ -1,0 +1,6 @@
+_target_: src.losses.BiTemperedLogisticLoss
+eps: 0.1
+t1: 0.6
+t2: 1.4
+num_iters: 5
+reduction: mean
