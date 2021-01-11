@@ -20,6 +20,14 @@ train:
 
   - _target_: albumentations.Normalize
     p: 1.0
+    mean:
+      - 0.42984136
+      - 0.49624753
+      - 0.3129598
+    std:
+      - 0.21417203
+      - 0.21910103
+      - 0.19542212
     max_pixel_value: 255.0
 
   - _target_: albumentations.pytorch.transforms.ToTensorV2
@@ -33,6 +41,14 @@ valid:
 
   - _target_: albumentations.Normalize
     p: 1.0
+    mean:
+      - 0.42984136
+      - 0.49624753
+      - 0.3129598
+    std:
+      - 0.21417203
+      - 0.21910103
+      - 0.19542212
     max_pixel_value: 255.0
 
   - _target_: albumentations.pytorch.transforms.ToTensorV2
