@@ -22,8 +22,9 @@ log = logging.getLogger(__name__)
 
 
 def cli_main(args: DictConfig):
+
     # init wandb experiment
-    LOGGER = WandbLogger(project=args.general.project_name, log_model=True)
+    LOGGER = WandbLogger(project=args.general.project_name, log_model=False)
     LOGGER.log_hyperparams(args)
 
     RANDOM_SEED = args.general.random_seed
@@ -92,21 +93,6 @@ def cli_main(args: DictConfig):
 
     # Testing Stage
     _ = trainer.test(datamodule=DATAMODULE, verbose=False, ckpt_path=ckpt_path)
-
-    # load in the best model weights
-    CHECKPOINT = torch.load(ckpt_path)
-    LIGHTNING_MODEL.load_state_dict(CHECKPOINT["state_dict"])
-    log.info(f"Best weights loaded from checkpoint : {ckpt_path}")
-
-    # create model save dir
-    os.makedirs(args.general.save_dir, exist_ok=True)
-    PATH = os.path.join(args.general.save_dir, f"{MODEL_NAME}.pt")
-
-    # save the weights of the model
-    LIGHTNING_MODEL.save_model_weights(PATH)
-
-    # upload trained weights to wandb
-    wandb.save(PATH)
 
     log.info("Cleaning up .... ")
 

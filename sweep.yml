@@ -1,0 +1,50 @@
+command:
+  - python
+  - ${program}
+  - --config-name
+  - 02-01-20-effnet3
+  - ${args_no_hyphens}
+method: grid
+metric:
+  goal: maximize
+  name: test/acc
+parameters:
+  activation:
+    distribution: constant
+    value: relu
+  augmentations:
+    distribution: constant
+    value: light-augs
+  curr_fold:
+    values:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+  general:
+    distribution: constant
+    value: default
+  learning_rate:
+    distribution: constant
+    value: 0.001
+  loss:
+    distribution: constant
+    value: labelsmoothing
+  mixmethod:
+    distribution: constant
+    value: default
+  network:
+    distribution: constant
+    value: transferlearning
+  optimizer:
+    distribution: constant
+    value: adam
+  scheduler:
+    distribution: constant
+    value: sgdr
+  trainer:
+    distribution: constant
+    value: fast-dev-cpu
+program: template.py
+project: cassava-leaf-disease-classification
