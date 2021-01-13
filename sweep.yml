@@ -4,17 +4,14 @@ command:
   - --config-name
   - 12-01-20-effnet4
   - ${args_no_hyphens}
+
 method: grid
+
 metric:
   goal: maximize
   name: test/acc
+
 parameters:
-  activation:
-    distribution: constant
-    value: relu
-  augmentations:
-    distribution: constant
-    value: light-augs
   curr_fold:
     values:
       - 0
@@ -22,32 +19,62 @@ parameters:
       - 2
       - 3
       - 4
+
+  activation:
+    distribution: constant
+    value: relu
+
+  augmentations:
+    distribution: constant
+    value: light-augs
+
   general:
     distribution: constant
     value: wandb-cassava
+
   learning_rate:
     distribution: constant
     value: 0.003
+
   loss:
     distribution: constant
     value: labelsmoothing
+
   mixmethod:
-    distribution: snapmix
-    value: default
+    distribution: constant
+    value: snapmix
+
   mixmethod.conf_prob:
     distribution: constant
     value: 0.5
+
   network:
     distribution: constant
     value: snapmix
+
   optimizer:
     distribution: constant
     value: adam
+
   scheduler:
     distribution: constant
     value: cosine-warmup
+
   trainer:
     distribution: constant
     value: default
+
+  batch_size:
+    distribution: constant
+    value: 16
+
+  lr_mult:
+    distribution: constant
+    value: 10
+
+  num_epochs:
+    distribution: constant
+    value: 10
+
 program: hydra_run.py
 project: cassava-leaf-disease-classification
