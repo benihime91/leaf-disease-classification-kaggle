@@ -2,7 +2,7 @@ command:
   - python
   - ${program}
   - --config-name
-  - 02-01-20-effnet3
+  - 12-01-20-effnet4
   - ${args_no_hyphens}
 method: grid
 metric:
@@ -24,27 +24,30 @@ parameters:
       - 4
   general:
     distribution: constant
-    value: default
+    value: wandb-cassava
   learning_rate:
     distribution: constant
-    value: 0.001
+    value: 0.003
   loss:
     distribution: constant
     value: labelsmoothing
   mixmethod:
-    distribution: constant
+    distribution: snapmix
     value: default
+  mixmethod.conf_prob:
+    distribution: constant
+    value: 0.5
   network:
     distribution: constant
-    value: transferlearning
+    value: snapmix
   optimizer:
     distribution: constant
     value: adam
   scheduler:
     distribution: constant
-    value: sgdr
+    value: cosine-warmup
   trainer:
     distribution: constant
-    value: fast-dev-cpu
-program: template.py
+    value: default
+program: hydra_run.py
 project: cassava-leaf-disease-classification
