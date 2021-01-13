@@ -13,7 +13,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
-from src.core import generate_random_id
+from src.core import generate_random_id, seed_everything
 from src.layers import apply_init, replace_activs
 from src.lightning.callbacks import *
 from src.lightning.core import CassavaLightningDataModule, LightningCassava
@@ -27,6 +27,7 @@ def cli_main(args: DictConfig):
     LOGGER.log_hyperparams(args)
 
     RANDOM_SEED = args.general.random_seed
+    seed_everything(RANDOM_SEED)
 
     if args.general.unique_idx is None:
         args.general.unique_idx = generate_random_id()
