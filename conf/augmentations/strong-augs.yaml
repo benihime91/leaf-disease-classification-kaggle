@@ -40,7 +40,7 @@ train:
   - _target_: albumentations.CoarseDropout
     p: 0.5
 
-  - _target_: albumentations.CutOut
+  - _target_: albumentations.Cutout
     p: 0.5
 
   - _target_: albumentations.pytorch.transforms.ToTensorV2
