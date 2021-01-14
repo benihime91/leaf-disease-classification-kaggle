@@ -21,10 +21,6 @@ train:
   - _target_: albumentations.VerticalFlip
     p: 0.5
 
-  - _target_: albumentations.Rotate
-    limit: 60
-    p: 0.5
-
   - _target_: albumentations.Normalize
     p: 1.0
     mean:
