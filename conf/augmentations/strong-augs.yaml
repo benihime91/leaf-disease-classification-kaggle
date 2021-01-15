@@ -3,7 +3,7 @@ train:
   - _target_: albumentations.RandomResizedCrop
     height: ${image_dims}
     width: ${image_dims}
-    p: 0.1
+    p: 1.0
 
   - _target_: albumentations.Transpose
     p: 0.5
