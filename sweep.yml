@@ -26,23 +26,23 @@ parameters:
 
   augmentations:
     distribution: constant
-    value: light-augs
+    value: no-augs
 
   general:
     distribution: constant
-    value: wandb-cassava
+    value: qblocks-wandb
 
   learning_rate:
     distribution: constant
-    value: 0.003
+    value: 2e-03
 
   loss:
     distribution: constant
-    value: labelsmoothing
+    value: bi-tempered-logistic-loss
 
   mixmethod:
     distribution: constant
-    value: snapmix
+    value: mixup-and-cutmix
 
   mixmethod.conf_prob:
     distribution: constant
@@ -50,7 +50,7 @@ parameters:
 
   network:
     distribution: constant
-    value: snapmix
+    value: transferlearning
 
   optimizer:
     distribution: constant
