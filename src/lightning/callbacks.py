@@ -108,7 +108,6 @@ class LitProgressBar(pl.callbacks.ProgressBar):
             desc='Validation sanity check',
             position=(2 * self.process_position),
             disable=self.is_disabled,
-            leave=False,
             dynamic_ncols=True,)
 
         return bar
@@ -120,7 +119,6 @@ class LitProgressBar(pl.callbacks.ProgressBar):
             initial=self.train_batch_idx,
             position=(2 * self.process_position),
             disable=self.is_disabled,
-            leave=False,
             dynamic_ncols=True,)
 
         return bar
@@ -131,7 +129,6 @@ class LitProgressBar(pl.callbacks.ProgressBar):
             desc='Validating',
             position=(2 * self.process_position + 1),
             disable=True,
-            leave=False,
             dynamic_ncols=False,)
 
         return bar
@@ -142,7 +139,6 @@ class LitProgressBar(pl.callbacks.ProgressBar):
             desc='Testing',
             position=(2 * self.process_position),
             disable=self.is_disabled,
-            leave=False,
             dynamic_ncols=True,)
 
         return bar
@@ -177,23 +173,20 @@ class PrintLogsCallback(pl.Callback):
 
     def on_test_epoch_end(self, trainer, pl_module, *args, **kwargs):
         metrics = trainer.callback_metrics
-        train_loss = metrics['train/loss']
-        train_acc  = metrics['train/acc']
-        valid_loss = metrics['valid/loss']
-        valid_acc  = metrics['valid/acc']
+
+        train_loss = metrics['train/loss_epoch']
+        train_acc  = metrics['train/acc_epoch']
+
         test_loss  = metrics['test/loss']
         test_acc   = metrics['test/acc']
 
 
-        fmt_str1 = "Summary: [Train] loss: {:.4f} acc: {:.4f}"
-        fmt_str2 = "Summary: [Valid] loss: {:.4f} acc: {:.4f}"
-        fmt_str3 = "Summary: [Test]  loss: {:.4f} acc: {:.4f}"
+        fmt_str1 = "[Train] loss: {:.4f} acc: {:.4f}"
+        fmt_str2 = "[Test ] loss: {:.4f} acc: {:.4f}"
 
         str1 = fmt_str1.format(train_loss, train_acc)
-        str2 = fmt_str2.format(valid_loss, valid_acc)
-        str3 = fmt_str3.format(test_loss, test_acc)
+        str2 = fmt_str2.format(test_loss, test_acc)
 
         self.logger.info("Finished !")
         self.logger.info(str1)
         self.logger.info(str2)
-        self.logger.info(str3)
