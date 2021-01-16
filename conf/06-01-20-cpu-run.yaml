@@ -12,21 +12,13 @@ defaults:
   - general: kaggle
   - trainer: default
 
-curr_fold: 0
-image_dir: ${general.image_dir}
-csv_path: ${general.csv_path}
-
 encoder: tf_efficientnet_b3_ns
-
 accumulate_batches: 1
-clip_grad_norm: 1.0
-
-image_dims: 120
+clip_grad_norm: 0
+image_dims: 512
 num_epochs: 10
-batch_size: 32
-
-learning_rate: 5e-03
-lr_mult: 100
+learning_rate: 1e-03
+lr_mult: 10
 
 hydra:
   run:
