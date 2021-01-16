@@ -1,0 +1,7 @@
+# @package scheduler
+function:
+  _target_: src.opts.LinearSchedulerWithWarmup
+  total_epochs: ${num_epochs}
+  last_epoch: -1
+metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
+scheduler_interval: step # step or epoch
