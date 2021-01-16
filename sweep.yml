@@ -12,13 +12,17 @@ metric:
   name: test/acc
 
 parameters:
-  curr_fold:
+  datamodule.curr_fold:
     values:
       - 0
       - 1
       - 2
       - 3
       - 4
+
+  datamodule.bs:
+    distribution: constant
+    value: 16
 
   activation:
     distribution: constant
@@ -63,10 +67,6 @@ parameters:
   trainer:
     distribution: constant
     value: default
-
-  batch_size:
-    distribution: constant
-    value: 16
 
   lr_mult:
     distribution: constant

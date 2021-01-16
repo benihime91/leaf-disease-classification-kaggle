@@ -23,7 +23,7 @@ def cli_main(args: DictConfig):
         args.general.unique_idx = generate_random_id()
 
     UNIQUE_ID = args.general.unique_idx
-    MODEL_NAME = f"{args.encoder}-fold={args.curr_fold}-{UNIQUE_ID}"
+    MODEL_NAME = f"{args.encoder}-fold={args.datamodule.curr_fold}-{UNIQUE_ID}"
 
     TRAIN_AUGS = A.Compose([instantiate(a) for a in args.augmentations.train])
     VALID_AUGS = A.Compose([instantiate(a) for a in args.augmentations.valid])
