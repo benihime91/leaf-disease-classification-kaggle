@@ -63,15 +63,6 @@ def cli_main(args: DictConfig):
         args.datamodule, train_augs=TRAIN_AUGS, valid_augs=VALID_AUGS,
     )
 
-    # DATAMODULE = CassavaLightningDataModule(
-    #     df_path=args.csv_path,
-    #     im_dir=args.image_dir,
-    #     curr_fold=args.curr_fold,
-    #     train_augs=TRAIN_AUGS,
-    #     valid_augs=VALID_AUGS,
-    #     bs=args.batch_size,
-    # )
-
     # initialize pytorch_lightning Trainer + Callbacks
     CALLBACKS = [
         WandbImageClassificationCallback(log_conf_mat=True),
@@ -136,7 +127,7 @@ def cli_main(args: DictConfig):
         pass
 
 
-@hydra.main(config_path="conf")
+@hydra.main(config_path="conf", config_name="02-01-20-seresnext50_32x4d")
 def cli_hydra(cfg: DictConfig):
     cli_main(cfg)
 
