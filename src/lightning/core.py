@@ -179,6 +179,12 @@ class LightningCassava(pl.LightningModule):
                 steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
                 sch = instantiate(self.hparams["scheduler"]["function"], optimizer=opt, steps_per_epoch=steps)
 
+            elif self.hparams["scheduler"]["function"]["_target_"] == "src.opts.LinearSchedulerWithWarmup":
+                steps = len(self.train_dataloader()) // self.trainer.accumulate_grad_batches
+                sch = instantiate(self.hparams["scheduler"]["function"], optimizer=opt,
+                                  steps_per_epoch=steps, warmup_steps=steps)
+
+
             else:
                 sch = instantiate(self.hparams["scheduler"]["function"], optimizer=opt)
 
