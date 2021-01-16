@@ -49,14 +49,18 @@ def cli_main(args: DictConfig):
     # init the LightingDataModule + LightningModule
     LIGHTNING_MODEL = LightningCassava(NETWORK, conf=args)
 
-    DATAMODULE = CassavaLightningDataModule(
-        df_path=args.csv_path,
-        im_dir=args.image_dir,
-        curr_fold=args.curr_fold,
-        train_augs=TRAIN_AUGS,
-        valid_augs=VALID_AUGS,
-        bs=args.batch_size,
+    DATAMODULE = instantiate(
+        args.datamodule, train_augs=TRAIN_AUGS, valid_augs=VALID_AUGS,
     )
+
+    # DATAMODULE = CassavaLightningDataModule(
+    #     df_path=args.csv_path,
+    #     im_dir=args.image_dir,
+    #     curr_fold=args.curr_fold,
+    #     train_augs=TRAIN_AUGS,
+    #     valid_augs=VALID_AUGS,
+    #     bs=args.batch_size,
+    # )
 
     trainer: Trainer = instantiate(args.trainer,)
 

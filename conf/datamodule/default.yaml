@@ -1,0 +1,7 @@
+# @package datamodule
+_target_: src.lightning.core.CassavaLightningDataModule
+df_path: ${csv_path}
+im_dir: ${image_dir}
+curr_fold: ${curr_fold}
+bs: ${batch_size}
+num_workers: 4

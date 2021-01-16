@@ -2,6 +2,7 @@ defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
   - augmentations: light-augs
+  - datamodule: default
   - network: snapmix
   - mixmethod: snapmix
   - optimizer: adamw

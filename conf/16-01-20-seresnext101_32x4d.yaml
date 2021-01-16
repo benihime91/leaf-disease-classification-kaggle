@@ -5,8 +5,8 @@ defaults:
   - datamodule: default
   - network: snapmix
   - mixmethod: snapmix
-  - optimizer: ranger
-  - scheduler: flatcos
+  - optimizer: adam
+  - scheduler: cosine-warmup
   - activation: relu
   - loss: labelsmoothing
   - general: kaggle
@@ -16,17 +16,17 @@ curr_fold: 0
 image_dir: ${general.image_dir}
 csv_path: ${general.csv_path}
 
-encoder: seresnext50_32x4d
+encoder: seresnext101_32x4d
 
 accumulate_batches: 1
-clip_grad_norm: 1.0
+clip_grad_norm: 0
 
 image_dims: 512
 num_epochs: 10
-batch_size: 32
+batch_size: 16
 
 learning_rate: 1e-03
-lr_mult: 100
+lr_mult: 10
 
 hydra:
   run:
