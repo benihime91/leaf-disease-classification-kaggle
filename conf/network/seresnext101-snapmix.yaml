@@ -1,0 +1,9 @@
+# @package network
+model:
+  _target_: pretrainedmodels.se_resnext101_32x4d
+  pretrained: imagenet
+
+transfer_learning_model:
+  _target_: src.networks.SnapMixTransferLearningModel
+  cut: -2
+  c: 5

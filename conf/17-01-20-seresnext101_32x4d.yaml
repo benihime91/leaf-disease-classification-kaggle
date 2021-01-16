@@ -1,18 +1,18 @@
 defaults:
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
-  - augmentations: light-augs-brightness-512
-  - network: snapmix
+  - augmentations: light-augs
   - datamodule: default
+  - network: seresnext101-snapmix
   - mixmethod: snapmix
-  - optimizer: ranger
-  - scheduler: flatcos
+  - optimizer: adam
+  - scheduler: cosine-warmup
   - activation: relu
   - loss: labelsmoothing
   - general: kaggle
   - trainer: default
 
-encoder: tf_efficientnet_b3_ns
+encoder: seresnext50_32x4d
 accumulate_batches: 1
 clip_grad_norm: 0
 image_dims: 512

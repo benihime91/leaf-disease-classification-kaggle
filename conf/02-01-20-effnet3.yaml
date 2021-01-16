@@ -5,8 +5,8 @@ defaults:
   - datamodule: default
   - network: snapmix
   - mixmethod: snapmix
-  - optimizer: ranger
-  - scheduler: flatcos
+  - optimizer: adam
+  - scheduler: cosine-warmup
   - activation: relu
   - loss: labelsmoothing
   - general: kaggle
