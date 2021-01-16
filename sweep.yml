@@ -30,7 +30,7 @@ parameters:
 
   general:
     distribution: constant
-    value: qblocks-wandb
+    value: wandb-cassava
 
   learning_rate:
     distribution: constant
