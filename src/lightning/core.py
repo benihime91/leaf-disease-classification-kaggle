@@ -93,7 +93,7 @@ class LightningCassava(pl.LightningModule):
         self.loss_func = instantiate(self.hparams['loss'])
 
         if self.mix_fn is not None:
-            self._log.info(f'Mixmethod : {self.mix_fn.__class__.__name__}')
+            self._log.info(f'Mixmethod : {self.mix_fn}')
 
         self._log.info(f'Loss Function : {self.loss_func}')
 
