@@ -51,8 +51,12 @@ class SnapMixTransferLearningModel(nn.Module):
         """
         super(SnapMixTransferLearningModel, self).__init__()
 
-        try   : feats  = encoder.fc.in_features
-        except: feats  = encoder.classifier.in_features
+        try:
+            try   : feats  = encoder.fc.in_features
+            except: feats  = encoder.classifier.in_features
+
+        except:
+            feats = encoder.last_linear.in_features
 
         self.encoder_name = encoder.__class__.__name__
         # cut layers from the encoder
