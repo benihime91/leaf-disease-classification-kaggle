@@ -3,5 +3,5 @@ _target_: torch.optim.AdamW
 weight_decay: 1e-01
 betas:
   - .9
-  - 0.999
-eps: 0.00000001
+  - 0.99
+eps: 1e-05
