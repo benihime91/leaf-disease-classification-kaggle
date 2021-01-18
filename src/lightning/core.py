@@ -289,6 +289,7 @@ class LightningVisionTransformer(pl.LightningModule):
         super().__init__()
         self.model = model
         self._log = log
+        self.accuracy = pl.metrics.Accuracy()
         self.save_hyperparameters(conf)
 
         try:
