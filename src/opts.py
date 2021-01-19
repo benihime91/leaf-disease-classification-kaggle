@@ -14,7 +14,7 @@ import math
 import torch
 from torch.optim.optimizer import Optimizer, required
 from torch.optim.lr_scheduler import *
-
+from torch.optim.lr_scheduler import _LRScheduler
 
 import warnings
 
