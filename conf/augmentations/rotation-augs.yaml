@@ -1,0 +1,51 @@
+# @package augmentations
+train:
+  - _target_: albumentations.HorizontalFlip
+    p: 0.5
+
+  - _target_: albumentations.VerticalFlip
+    p: 0.5
+
+  - _target_: albumentations.Rotate
+    p: 0.5
+
+  - _target_: albumentations.RandomResizedCrop
+    height: ${image_dims}
+    width: ${image_dims}
+    p: 1.0
+
+  - _target_: albumentations.Normalize
+    p: 1.0
+    mean:
+      - 0.42984136
+      - 0.49624753
+      - 0.3129598
+    std:
+      - 0.21417203
+      - 0.21910103
+      - 0.19542212
+    max_pixel_value: 255.0
+
+  - _target_: albumentations.pytorch.transforms.ToTensorV2
+    p: 1.0
+
+valid:
+  - _target_: albumentations.Resize
+    height: ${image_dims}
+    width: ${image_dims}
+    p: 1.0
+
+  - _target_: albumentations.Normalize
+    p: 1.0
+    mean:
+      - 0.42984136
+      - 0.49624753
+      - 0.3129598
+    std:
+      - 0.21417203
+      - 0.21910103
+      - 0.19542212
+    max_pixel_value: 255.0
+
+  - _target_: albumentations.pytorch.transforms.ToTensorV2
+    p: 1.0

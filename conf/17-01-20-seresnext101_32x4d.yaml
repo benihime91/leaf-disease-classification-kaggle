@@ -12,7 +12,7 @@ defaults:
   - general: kaggle
   - trainer: default
 
-encoder: seresnext50_32x4d
+encoder: se_resnext101_32x4d
 accumulate_batches: 1
 clip_grad_norm: 0
 image_dims: 512
