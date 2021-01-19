@@ -6,38 +6,39 @@ __all__ = ['Lookahead', 'RAdam', 'Ranger', 'FlatCos', 'GradualWarmupScheduler', 
 # Cell
 from collections import defaultdict
 from typing import Union
+from itertools import chain
+
+import itertools as it
+import math
 
 import torch
 from torch.optim.optimizer import Optimizer, required
-import itertools as it
-import math
-import torch
-from torch.optim.lr_scheduler import _LRScheduler, CosineAnnealingLR, ReduceLROnPlateau, StepLR, LambdaLR
+from torch.optim.lr_scheduler import *
 
-from collections import defaultdict
-from itertools import chain
+
 import warnings
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # Cell
 # Lookahead implementation from https://github.com/lonePatient/lookahead_pytorch/blob/master/optimizer.py
 class Lookahead(Optimizer):
-    '''
+    """
     PyTorch implementation of the lookahead wrapper.
     Lookahead Optimizer: https://arxiv.org/abs/1907.08610
-    '''
+    """
+
     def __init__(self, optimizer, alpha=0.5, k=6, pullback_momentum="none"):
-        '''
+        """
         :param optimizer:inner optimizer
         :param k (int): number of lookahead steps
         :param alpha(float): linear interpolation factor. 1.0 recovers the inner optimizer.
         :param pullback_momentum (str): change to inner optimizer momentum on interpolation update
-        '''
+        """
         if not 0.0 <= alpha <= 1.0:
-            raise ValueError(f'Invalid slow update rate: {alpha}')
+            raise ValueError(f"Invalid slow update rate: {alpha}")
         if not 1 <= k:
-            raise ValueError(f'Invalid lookahead steps: {k}')
+            raise ValueError(f"Invalid lookahead steps: {k}")
         self.optimizer = optimizer
         self.param_groups = self.optimizer.param_groups
         self.alpha = alpha
@@ -49,19 +50,19 @@ class Lookahead(Optimizer):
 
         # Cache the current optimizer parameters
         for group in self.optimizer.param_groups:
-            for p in group['params']:
+            for p in group["params"]:
                 param_state = self.state[p]
-                param_state['cached_params'] = torch.zeros_like(p.data)
-                param_state['cached_params'].copy_(p.data)
+                param_state["cached_params"] = torch.zeros_like(p.data)
+                param_state["cached_params"].copy_(p.data)
 
     def __getstate__(self):
         return {
-            'state': self.state,
-            'optimizer': self.optimizer,
-            'alpha': self.alpha,
-            'step_counter': self.step_counter,
-            'k':self.k,
-            'pullback_momentum': self.pullback_momentum
+            "state": self.state,
+            "optimizer": self.optimizer,
+            "alpha": self.alpha,
+            "step_counter": self.step_counter,
+            "k": self.k,
+            "pullback_momentum": self.pullback_momentum,
         }
 
     def zero_grad(self):
@@ -77,18 +78,18 @@ class Lookahead(Optimizer):
         """Useful for performing evaluation on the slow weights (which typically generalize better)
         """
         for group in self.optimizer.param_groups:
-            for p in group['params']:
+            for p in group["params"]:
                 param_state = self.state[p]
-                param_state['backup_params'] = torch.zeros_like(p.data)
-                param_state['backup_params'].copy_(p.data)
-                p.data.copy_(param_state['cached_params'])
+                param_state["backup_params"] = torch.zeros_like(p.data)
+                param_state["backup_params"].copy_(p.data)
+                p.data.copy_(param_state["cached_params"])
 
     def _clear_and_load_backup(self):
         for group in self.optimizer.param_groups:
-            for p in group['params']:
+            for p in group["params"]:
                 param_state = self.state[p]
-                p.data.copy_(param_state['backup_params'])
-                del param_state['backup_params']
+                p.data.copy_(param_state["backup_params"])
+                del param_state["backup_params"]
 
     def step(self, closure=None):
         """Performs a single Lookahead optimization step.
@@ -103,23 +104,31 @@ class Lookahead(Optimizer):
             self.step_counter = 0
             # Lookahead and cache the current optimizer parameters
             for group in self.optimizer.param_groups:
-                for p in group['params']:
+                for p in group["params"]:
                     param_state = self.state[p]
-                    p.data.mul_(self.alpha).add_(1.0 - self.alpha, param_state['cached_params'])  # crucial line
-                    param_state['cached_params'].copy_(p.data)
+                    p.data.mul_(self.alpha).add_(
+                        1.0 - self.alpha, param_state["cached_params"]
+                    )  # crucial line
+                    param_state["cached_params"].copy_(p.data)
                     if self.pullback_momentum == "pullback":
                         internal_momentum = self.optimizer.state[p]["momentum_buffer"]
-                        self.optimizer.state[p]["momentum_buffer"] = internal_momentum.mul_(self.alpha).add_(
-                            1.0 - self.alpha, param_state["cached_mom"])
-                        param_state["cached_mom"] = self.optimizer.state[p]["momentum_buffer"]
+                        self.optimizer.state[p][
+                            "momentum_buffer"
+                        ] = internal_momentum.mul_(self.alpha).add_(
+                            1.0 - self.alpha, param_state["cached_mom"]
+                        )
+                        param_state["cached_mom"] = self.optimizer.state[p][
+                            "momentum_buffer"
+                        ]
                     elif self.pullback_momentum == "reset":
-                        self.optimizer.state[p]["momentum_buffer"] = torch.zeros_like(p.data)
+                        self.optimizer.state[p]["momentum_buffer"] = torch.zeros_like(
+                            p.data
+                        )
 
         return loss
 
 # Cell
 class RAdam(Optimizer):
-
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
         self.buffer = [[None, None, None] for ind in range(10)]
@@ -136,80 +145,101 @@ class RAdam(Optimizer):
 
         for group in self.param_groups:
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
-
                 grad = p.grad.data.float()
                 if grad.is_sparse:
-                    raise RuntimeError('RAdam does not support sparse gradients')
+                    raise RuntimeError("RAdam does not support sparse gradients")
 
                 p_data_fp32 = p.data.float()
 
                 state = self.state[p]
 
                 if len(state) == 0:
-                    state['step'] = 0
-                    state['exp_avg'] = torch.zeros_like(p_data_fp32)
-                    state['exp_avg_sq'] = torch.zeros_like(p_data_fp32)
+                    state["step"] = 0
+                    state["exp_avg"] = torch.zeros_like(p_data_fp32)
+                    state["exp_avg_sq"] = torch.zeros_like(p_data_fp32)
                 else:
-                    state['exp_avg'] = state['exp_avg'].type_as(p_data_fp32)
-                    state['exp_avg_sq'] = state['exp_avg_sq'].type_as(p_data_fp32)
+                    state["exp_avg"] = state["exp_avg"].type_as(p_data_fp32)
+                    state["exp_avg_sq"] = state["exp_avg_sq"].type_as(p_data_fp32)
 
-                exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
-                beta1, beta2 = group['betas']
+                exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
+                beta1, beta2 = group["betas"]
 
-                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value = 1 - beta2)
-                exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+                exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
+                exp_avg.mul_(beta1).add_(1 - beta1, grad)
 
-                state['step'] += 1
-                buffered = self.buffer[int(state['step'] % 10)]
-                if state['step'] == buffered[0]:
+                state["step"] += 1
+                buffered = self.buffer[int(state["step"] % 10)]
+                if state["step"] == buffered[0]:
                     N_sma, step_size = buffered[1], buffered[2]
                 else:
-                    buffered[0] = state['step']
-                    beta2_t = beta2 ** state['step']
+                    buffered[0] = state["step"]
+                    beta2_t = beta2 ** state["step"]
                     N_sma_max = 2 / (1 - beta2) - 1
-                    N_sma = N_sma_max - 2 * state['step'] * beta2_t / (1 - beta2_t)
+                    N_sma = N_sma_max - 2 * state["step"] * beta2_t / (1 - beta2_t)
                     buffered[1] = N_sma
 
                     # more conservative since it's an approximated value
                     if N_sma >= 5:
-                        step_size = math.sqrt((1 - beta2_t) * (N_sma - 4) / (N_sma_max - 4) * (N_sma - 2) / N_sma * N_sma_max / (N_sma_max - 2)) / (1 - beta1 ** state['step'])
+                        step_size = (
+                            group["lr"]
+                            * math.sqrt(
+                                (1 - beta2_t)
+                                * (N_sma - 4)
+                                / (N_sma_max - 4)
+                                * (N_sma - 2)
+                                / N_sma
+                                * N_sma_max
+                                / (N_sma_max - 2)
+                            )
+                            / (1 - beta1 ** state["step"])
+                        )
                     else:
-                        step_size = 1.0 / (1 - beta1 ** state['step'])
+                        step_size = group["lr"] / (1 - beta1 ** state["step"])
                     buffered[2] = step_size
 
-                if group['weight_decay'] != 0:
-                    p_data_fp32.add_(-group['weight_decay'] * group['lr'], p_data_fp32)
+                if group["weight_decay"] != 0:
+                    p_data_fp32.add_(-group["weight_decay"] * group["lr"], p_data_fp32)
 
                 # more conservative since it's an approximated value
                 if N_sma >= 5:
-                    denom = exp_avg_sq.sqrt().add_(group['eps'])
-                    p_data_fp32.addcdiv_(exp_avg, denom, value=-step_size * group['lr'])
+                    denom = exp_avg_sq.sqrt().add_(group["eps"])
+                    p_data_fp32.addcdiv_(-step_size, exp_avg, denom)
                 else:
-                    p_data_fp32.add_(exp_avg, alpha=-step_size * group['lr'])
+                    p_data_fp32.add_(-step_size, exp_avg)
 
                 p.data.copy_(p_data_fp32)
 
         return loss
 
 # Cell
-#from - https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer/blob/master/ranger/ranger.py
+# from - https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer/blob/master/ranger/ranger.py
 class Ranger(Optimizer):
-    def __init__(self, params, lr=1e-3, alpha=0.5, k=6, N_sma_threshhold=5,
-                 betas=(.95, 0.999), eps=1e-5, weight_decay=0,
-                 use_gc=True, gc_conv_only=False):
+    def __init__(
+        self,
+        params,
+        lr=1e-3,
+        alpha=0.5,
+        k=6,
+        N_sma_threshhold=5,
+        betas=(0.95, 0.999),
+        eps=1e-5,
+        weight_decay=0,
+        use_gc=True,
+        gc_conv_only=False,
+    ):
 
         # parameter checks
         if not 0.0 <= alpha <= 1.0:
-            raise ValueError(f'Invalid slow update rate: {alpha}')
+            raise ValueError(f"Invalid slow update rate: {alpha}")
         if not 1 <= k:
-            raise ValueError(f'Invalid lookahead steps: {k}')
+            raise ValueError(f"Invalid lookahead steps: {k}")
         if not lr > 0:
-            raise ValueError(f'Invalid Learning Rate: {lr}')
+            raise ValueError(f"Invalid Learning Rate: {lr}")
         if not eps > 0:
-            raise ValueError(f'Invalid eps: {eps}')
+            raise ValueError(f"Invalid eps: {eps}")
 
         # parameter comments:
         # beta1 (momentum) of .95 seems to work better than .90...
@@ -217,8 +247,16 @@ class Ranger(Optimizer):
         # In both cases, worth testing on your dataset (.90 vs .95, 4 vs 5) to make sure which works best for you.
 
         # prep defaults and init torch.optim base
-        defaults = dict(lr=lr, alpha=alpha, k=k, step_counter=0, betas=betas,
-                        N_sma_threshhold=N_sma_threshhold, eps=eps, weight_decay=weight_decay)
+        defaults = dict(
+            lr=lr,
+            alpha=alpha,
+            k=k,
+            step_counter=0,
+            betas=betas,
+            N_sma_threshhold=N_sma_threshhold,
+            eps=eps,
+            weight_decay=weight_decay,
+        )
         super().__init__(params, defaults)
 
         # adjustable threshold
@@ -250,88 +288,94 @@ class Ranger(Optimizer):
         # Evaluate averages and grad, update param tensors
         for group in self.param_groups:
 
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
                 grad = p.grad.data.float()
 
                 if grad.is_sparse:
                     raise RuntimeError(
-                        'Ranger optimizer does not support sparse gradients')
+                        "Ranger optimizer does not support sparse gradients"
+                    )
 
                 p_data_fp32 = p.data.float()
 
                 state = self.state[p]  # get state dict for this param
 
-                if len(state) == 0:  # if first time to run...init dictionary with our desired entries
+                if (
+                    len(state) == 0
+                ):  # if first time to run...init dictionary with our desired entries
                     # if self.first_run_check==0:
                     # self.first_run_check=1
-                    #print("Initializing slow buffer...should not see this at load from saved model!")
-                    state['step'] = 0
-                    state['exp_avg'] = torch.zeros_like(p_data_fp32)
-                    state['exp_avg_sq'] = torch.zeros_like(p_data_fp32)
+                    # print("Initializing slow buffer...should not see this at load from saved model!")
+                    state["step"] = 0
+                    state["exp_avg"] = torch.zeros_like(p_data_fp32)
+                    state["exp_avg_sq"] = torch.zeros_like(p_data_fp32)
 
                     # look ahead weight storage now in state dict
-                    state['slow_buffer'] = torch.empty_like(p.data)
-                    state['slow_buffer'].copy_(p.data)
+                    state["slow_buffer"] = torch.empty_like(p.data)
+                    state["slow_buffer"].copy_(p.data)
 
                 else:
-                    state['exp_avg'] = state['exp_avg'].type_as(p_data_fp32)
-                    state['exp_avg_sq'] = state['exp_avg_sq'].type_as(
-                        p_data_fp32)
+                    state["exp_avg"] = state["exp_avg"].type_as(p_data_fp32)
+                    state["exp_avg_sq"] = state["exp_avg_sq"].type_as(p_data_fp32)
 
                 # begin computations
-                exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
-                beta1, beta2 = group['betas']
+                exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
+                beta1, beta2 = group["betas"]
 
                 # GC operation for Conv layers and FC layers
                 if grad.dim() > self.gc_gradient_threshold:
                     grad.add_(-grad.mean(dim=tuple(range(1, grad.dim())), keepdim=True))
 
-                state['step'] += 1
+                state["step"] += 1
 
                 # compute variance mov avg
                 exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
                 # compute mean moving avg
                 exp_avg.mul_(beta1).add_(1 - beta1, grad)
 
-                buffered = self.radam_buffer[int(state['step'] % 10)]
+                buffered = self.radam_buffer[int(state["step"] % 10)]
 
-                if state['step'] == buffered[0]:
+                if state["step"] == buffered[0]:
                     N_sma, step_size = buffered[1], buffered[2]
                 else:
-                    buffered[0] = state['step']
-                    beta2_t = beta2 ** state['step']
+                    buffered[0] = state["step"]
+                    beta2_t = beta2 ** state["step"]
                     N_sma_max = 2 / (1 - beta2) - 1
-                    N_sma = N_sma_max - 2 * \
-                        state['step'] * beta2_t / (1 - beta2_t)
+                    N_sma = N_sma_max - 2 * state["step"] * beta2_t / (1 - beta2_t)
                     buffered[1] = N_sma
                     if N_sma > self.N_sma_threshhold:
-                        step_size = math.sqrt((1 - beta2_t) * (N_sma - 4) / (N_sma_max - 4) * (
-                            N_sma - 2) / N_sma * N_sma_max / (N_sma_max - 2)) / (1 - beta1 ** state['step'])
+                        step_size = math.sqrt(
+                            (1 - beta2_t)
+                            * (N_sma - 4)
+                            / (N_sma_max - 4)
+                            * (N_sma - 2)
+                            / N_sma
+                            * N_sma_max
+                            / (N_sma_max - 2)
+                        ) / (1 - beta1 ** state["step"])
                     else:
-                        step_size = 1.0 / (1 - beta1 ** state['step'])
+                        step_size = 1.0 / (1 - beta1 ** state["step"])
                     buffered[2] = step_size
 
-                if group['weight_decay'] != 0:
-                    p_data_fp32.add_(-group['weight_decay']
-                                     * group['lr'], p_data_fp32)
+                if group["weight_decay"] != 0:
+                    p_data_fp32.add_(-group["weight_decay"] * group["lr"], p_data_fp32)
 
                 # apply lr
                 if N_sma > self.N_sma_threshhold:
-                    denom = exp_avg_sq.sqrt().add_(group['eps'])
-                    p_data_fp32.addcdiv_(-step_size *
-                                         group['lr'], exp_avg, denom)
+                    denom = exp_avg_sq.sqrt().add_(group["eps"])
+                    p_data_fp32.addcdiv_(-step_size * group["lr"], exp_avg, denom)
                 else:
-                    p_data_fp32.add_(-step_size * group['lr'], exp_avg)
+                    p_data_fp32.add_(-step_size * group["lr"], exp_avg)
 
                 p.data.copy_(p_data_fp32)
 
                 # integrated look ahead...
                 # we do it at the param level instead of group level
-                if state['step'] % group['k'] == 0:
+                if state["step"] % group["k"] == 0:
                     # get access to slow param tensor
-                    slow_p = state['slow_buffer']
+                    slow_p = state["slow_buffer"]
                     # (fast weights - slow weights) * alpha
                     slow_p.add_(self.alpha, p.data - slow_p)
                     # copy interpolated weights to RAdam param tensor
@@ -340,8 +384,15 @@ class Ranger(Optimizer):
 
 # Cell
 class FlatCos(_LRScheduler):
-    def __init__(self, optimizer:Optimizer, num_epochs:int, steps_per_epoch:int,
-                 pct_start: float=0.7, eta_min: float =0, last_epoch:int =-1):
+    def __init__(
+        self,
+        optimizer: Optimizer,
+        num_epochs: int,
+        steps_per_epoch: int,
+        pct_start: float = 0.7,
+        eta_min: float = 0,
+        last_epoch: int = -1,
+    ):
         max_iter = num_epochs * steps_per_epoch
         self.flat_range = int(max_iter * pct_start)
         self.T_max = max_iter - self.flat_range
@@ -353,12 +404,17 @@ class FlatCos(_LRScheduler):
             return [base_lr for base_lr in self.base_lrs]
         else:
             cr_epoch = self.last_epoch - self.flat_range
-            lrs = [self.eta_min + (base_lr - self.eta_min) * (1 + math.cos(math.pi * (cr_epoch / self.T_max)))/ 2
-                   for base_lr in self.base_lrs]
+            lrs = [
+                self.eta_min
+                + (base_lr - self.eta_min)
+                * (1 + math.cos(math.pi * (cr_epoch / self.T_max)))
+                / 2
+                for base_lr in self.base_lrs
+            ]
             return lrs
 
 # Cell
-#from - https://github.com/ildoonet/pytorch-gradual-warmup-lr/blob/master/warmup_scheduler/scheduler.py
+# from - https://github.com/ildoonet/pytorch-gradual-warmup-lr/blob/master/warmup_scheduler/scheduler.py
 class GradualWarmupScheduler(_LRScheduler):
     """ Gradually warm-up(increasing) learning rate in optimizer.
     Proposed in 'Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour'.
@@ -372,8 +428,8 @@ class GradualWarmupScheduler(_LRScheduler):
 
     def __init__(self, optimizer, multiplier, total_epoch, after_scheduler=None):
         self.multiplier = multiplier
-        if self.multiplier < 1.:
-            raise ValueError('multiplier should be greater thant or equal to 1.')
+        if self.multiplier < 1.0:
+            raise ValueError("multiplier should be greater thant or equal to 1.")
         self.total_epoch = total_epoch
         self.after_scheduler = after_scheduler
         self.finished = False
@@ -383,24 +439,37 @@ class GradualWarmupScheduler(_LRScheduler):
         if self.last_epoch > self.total_epoch:
             if self.after_scheduler:
                 if not self.finished:
-                    self.after_scheduler.base_lrs = [base_lr * self.multiplier for base_lr in self.base_lrs]
+                    self.after_scheduler.base_lrs = [
+                        base_lr * self.multiplier for base_lr in self.base_lrs
+                    ]
                     self.finished = True
                 return self.after_scheduler.get_last_lr()
             return [base_lr * self.multiplier for base_lr in self.base_lrs]
 
         if self.multiplier == 1.0:
-            return [base_lr * (float(self.last_epoch) / self.total_epoch) for base_lr in self.base_lrs]
+            return [
+                base_lr * (float(self.last_epoch) / self.total_epoch)
+                for base_lr in self.base_lrs
+            ]
         else:
-            return [base_lr * ((self.multiplier - 1.) * self.last_epoch / self.total_epoch + 1.) for base_lr in self.base_lrs]
+            return [
+                base_lr
+                * ((self.multiplier - 1.0) * self.last_epoch / self.total_epoch + 1.0)
+                for base_lr in self.base_lrs
+            ]
 
     def step_ReduceLROnPlateau(self, metrics, epoch=None):
         if epoch is None:
             epoch = self.last_epoch + 1
         self.last_epoch = epoch if epoch != 0 else 1
         if self.last_epoch <= self.total_epoch:
-            warmup_lr = [base_lr * ((self.multiplier - 1.) * self.last_epoch / self.total_epoch + 1.) for base_lr in self.base_lrs]
+            warmup_lr = [
+                base_lr
+                * ((self.multiplier - 1.0) * self.last_epoch / self.total_epoch + 1.0)
+                for base_lr in self.base_lrs
+            ]
             for param_group, lr in zip(self.optimizer.param_groups, warmup_lr):
-                param_group['lr'] = lr
+                param_group["lr"] = lr
         else:
             if epoch is None:
                 self.after_scheduler.step(metrics, None)
@@ -421,33 +490,54 @@ class GradualWarmupScheduler(_LRScheduler):
             self.step_ReduceLROnPlateau(metrics, epoch)
 
 # Cell
-def CosineAnnealingWarmupScheduler(optimizer:Optimizer, total_epochs:int, steps_per_epoch:int, eta_min:float=0.,
-                                   pct_start:Union[float, int] = 0.1):
+def CosineAnnealingWarmupScheduler(
+    optimizer: Optimizer,
+    total_epochs: int,
+    steps_per_epoch: int,
+    eta_min: float = 0.0,
+    pct_start: Union[float, int] = 0.1,
+):
 
     "Warmup till `pct_start` after which CosineAnnealing"
-    total_steps  = total_epochs * steps_per_epoch
+    total_steps = total_epochs * steps_per_epoch
 
-    if isinstance(pct_start, int)    :  warmup_steps = pct_start
-    elif isinstance(pct_start, float):  warmup_steps = pct_start * total_steps
+    if isinstance(pct_start, int):
+        warmup_steps = pct_start
+    elif isinstance(pct_start, float):
+        warmup_steps = pct_start * total_steps
 
     cosine_scheduler = CosineAnnealingLR(optimizer, T_max=total_steps, eta_min=eta_min)
 
-    warmup_scheduler = GradualWarmupScheduler(optimizer,
-                                            multiplier=1,
-                                            total_epoch=warmup_steps,
-                                            after_scheduler=cosine_scheduler)
-    #update class name
-    warmup_scheduler.__class__.__name__ = 'CosineAnnealingWarmupScheduler'
+    warmup_scheduler = GradualWarmupScheduler(
+        optimizer,
+        multiplier=1,
+        total_epoch=warmup_steps,
+        after_scheduler=cosine_scheduler,
+    )
+    # update class name
+    warmup_scheduler.__class__.__name__ = "CosineAnnealingWarmupScheduler"
     return warmup_scheduler
 
 # Cell
-#from: https://huggingface.co/transformers/_modules/transformers/optimization.html#get_linear_schedule_with_warmup
-def LinearSchedulerWithWarmup(optimizer: Optimizer, warmup_steps:int, total_epochs:int, steps_per_epoch:int, last_epoch=-1):
+# from: https://huggingface.co/transformers/_modules/transformers/optimization.html#get_linear_schedule_with_warmup
+def LinearSchedulerWithWarmup(
+    optimizer: Optimizer,
+    warmup_steps: int,
+    total_epochs: int,
+    steps_per_epoch: int,
+    last_epoch=-1,
+):
     total_steps = steps_per_epoch * total_epochs
+
     def lr_lambda(current_step: int):
         if current_step < warmup_steps:
             return float(current_step) / float(max(1, warmup_steps))
-        return max(0.0, float(total_steps - current_step) / float(max(1, total_steps - warmup_steps)))
+        return max(
+            0.0,
+            float(total_steps - current_step)
+            / float(max(1, total_steps - warmup_steps)),
+        )
+
     scheduler = LambdaLR(optimizer, lr_lambda, last_epoch)
-    scheduler.__class__.__name__ = 'LinearSchedulerWithWarmup'
+    scheduler.__class__.__name__ = "LinearSchedulerWithWarmup"
     return scheduler
