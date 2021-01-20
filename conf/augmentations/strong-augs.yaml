@@ -14,12 +14,6 @@ train:
   - _target_: albumentations.VerticalFlip
     p: 0.5
 
-  - _target_: albumentations.HueSaturationValue
-    hue_shift_limit: 0.2
-    sat_shift_limit: 0.2
-    val_shift_limit: 0.2
-    p: 0.5
-
   - _target_: albumentations.RandomBrightnessContrast
     brightness_limit: 0.1
     contrast_limit: 0.1
@@ -38,9 +32,6 @@ train:
     max_pixel_value: 255.0
 
   - _target_: albumentations.CoarseDropout
-    p: 0.5
-
-  - _target_: albumentations.Cutout
     p: 0.5
 
   - _target_: albumentations.pytorch.transforms.ToTensorV2
