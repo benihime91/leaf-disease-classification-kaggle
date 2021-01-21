@@ -9,7 +9,9 @@ import numpy as np
 from torch.distributions.beta import Beta
 from torch.nn import Module
 from torch import tensor
+
 from functools import partial
+from collections import namedtuple
 
 from .core import *
 from .layers import *
@@ -19,31 +21,36 @@ from .opts import *
 
 # Cell
 # from : https://github.com/fastai/fastai/blob/493023513ddd5157647bd10e9cebbbbdc043474c/fastai/layers.py#L582
-class NoneReduce():
+class NoneReduce:
     "A context manager to evaluate `loss_func` with none reduce."
-    def __init__(self, loss_func): self.loss_func,self.old_red = loss_func,None
+
+    def __init__(self, loss_func):
+        self.loss_func, self.old_red = loss_func, None
 
     def __enter__(self):
-        if hasattr(self.loss_func, 'reduction'):
+        if hasattr(self.loss_func, "reduction"):
             self.old_red = self.loss_func.reduction
-            self.loss_func.reduction = 'none'
+            self.loss_func.reduction = "none"
             return self.loss_func
-        else: return partial(self.loss_func, reduction='none')
+        else:
+            return partial(self.loss_func, reduction="none")
 
     def __exit__(self, type, value, traceback):
-        if self.old_red is not None: self.loss_func.reduction = self.old_red
+        if self.old_red is not None:
+            self.loss_func.reduction = self.old_red
 
 # Cell
 # modified from : https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
-class Mixup():
+class Mixup:
     "Implements mixup from https://arxiv.org/abs/1710.09412"
+
     def __init__(self, alpha: float = 0.4, conf_prob=1.0):
         self.distrib = alpha
         self.device = None
         self.conf_prob = conf_prob
         self.is_active = False
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
+    def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
         r = np.random.rand(1)
         self.yb1 = yb
 
@@ -51,7 +58,8 @@ class Mixup():
             self.is_active = True
             bs = xb.size()[0]
 
-            if self.device is None: self.device = xb.device
+            if self.device is None:
+                self.device = xb.device
 
             self.lam = np.random.beta(self.distrib, self.distrib)
             self.lam = torch.tensor(self.lam, device=self.device)
@@ -64,22 +72,30 @@ class Mixup():
         return xb
 
     def __str__(self):
-        return f'Mixup ,conf_prob={self.conf_prob}, alpha={self.distrib}'
+        mix = namedtuple("Mixup", ["probability", "alpha"])
+        return str(mix(self.conf_prob, self.distrib))
 
-    def loss(self, lf, pred, reduction='mean'):
+    def loss(self, lf, pred, reduction="mean"):
         self.old_lf = lf
         if self.is_active:
             with NoneReduce(self.old_lf) as lf:
                 loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
-                loss = loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
+                loss = (
+                    loss.mean()
+                    if reduction == "mean"
+                    else loss.sum()
+                    if reduction == "sum"
+                    else loss
+                )
         if not self.is_active:
             loss = self.old_lf(pred, self.yb1)
         return loss
 
 # Cell
-#modified from : https://github.com/clovaai/CutMix-PyTorch/blob/master/train.py
-class Cutmix():
+# modified from : https://github.com/clovaai/CutMix-PyTorch/blob/master/train.py
+class Cutmix:
     "Implementation of `https://arxiv.org/abs/1905.04899`"
+
     def __init__(self, alpha: float = 1.0, conf_prob=1.0):
         self.device = None
         self.distrib = alpha
@@ -87,7 +103,7 @@ class Cutmix():
         self.conf_prob = conf_prob
 
     def rand_bbox(self, W, H, lam):
-        cut_rat = torch.sqrt(1. - lam)
+        cut_rat = torch.sqrt(1.0 - lam)
         cut_w = torch.round(W * cut_rat).type(torch.long).to(self.device)
         cut_h = torch.round(H * cut_rat).type(torch.long).to(self.device)
 
@@ -98,9 +114,14 @@ class Cutmix():
         y1 = torch.clamp(cy - cut_h // 2, 0, H)
         x2 = torch.clamp(cx + cut_w // 2, 0, W)
         y2 = torch.clamp(cy + cut_h // 2, 0, H)
-        return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
+        return (
+            x1.to(self.device),
+            y1.to(self.device),
+            x2.to(self.device),
+            y2.to(self.device),
+        )
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
+    def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
         r = np.random.rand(1)
         self.yb1 = yb
 
@@ -109,7 +130,8 @@ class Cutmix():
 
             bs, _, H, W = xb.size()
 
-            if self.device is None: self.device = xb.device
+            if self.device is None:
+                self.device = xb.device
 
             self.lam = np.random.beta(self.distrib, self.distrib)
             self.lam = torch.tensor(self.lam, device=self.device)
@@ -120,39 +142,47 @@ class Cutmix():
             x1, y1, x2, y2 = self.rand_bbox(W, H, self.lam)
             xb[:, :, x1:x2, y1:y2] = xb[index, :, x1:x2, y1:y2]
             # adjust lambda to exactly match pixel ratio
-            self.lam = (1 - ((x2-x1)*(y2-y1))/float(W*H)).item()
+            self.lam = (1 - ((x2 - x1) * (y2 - y1)) / float(W * H)).item()
         else:
             self.is_active = False
         return xb
 
     def __str__(self):
-        return f'Cutmix ,conf_prob={self.conf_prob}, alpha={self.distrib}'
+        mix = namedtuple("Cutmix", ["probability", "alpha"])
+        return str(mix(self.conf_prob, self.distrib))
 
-    def loss(self, lf, pred, reduction='mean'):
+    def loss(self, lf, pred, reduction="mean"):
         self.old_lf = lf
         if self.is_active:
             with NoneReduce(self.old_lf) as lf:
                 loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
-                loss = loss.mean() if reduction == 'mean' else loss.sum() if reduction == 'sum' else loss
+                loss = (
+                    loss.mean()
+                    if reduction == "mean"
+                    else loss.sum()
+                    if reduction == "sum"
+                    else loss
+                )
         if not self.is_active:
             loss = self.old_lf(pred, self.yb1)
         return loss
 
 # Cell
 # @TODO: add midlevel classification branch in learning.
-class SnapMix():
+class SnapMix:
     "Implementation of https://arxiv.org/abs/2012.04846"
+
     def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0):
-        self.device  = None
+        self.device = None
         self.distrib, self.conf_prob = alpha, conf_prob
         self.is_active = False
 
     def rand_bbox(self, W, H, lam):
-        cut_rat = torch.sqrt(1. - lam)
+        cut_rat = torch.sqrt(1.0 - lam)
         cut_w = torch.round(W * cut_rat).type(torch.long).to(self.device)
         cut_h = torch.round(H * cut_rat).type(torch.long).to(self.device)
 
-        #uniform
+        # uniform
         cx = torch.randint(0, W, (1,), device=self.device)
         cy = torch.randint(0, H, (1,), device=self.device)
 
@@ -161,33 +191,42 @@ class SnapMix():
         x2 = torch.clamp(cx + cut_w // 2, 0, W)
         y2 = torch.clamp(cy + cut_h // 2, 0, H)
 
-        return x1.to(self.device), y1.to(self.device), x2.to(self.device), y2.to(self.device)
+        return (
+            x1.to(self.device),
+            y1.to(self.device),
+            x2.to(self.device),
+            y2.to(self.device),
+        )
 
-
-    def get_spm(self, input: torch.Tensor, target: torch.Tensor, model: SnapMixTransferLearningModel):
+    def get_spm(
+        self,
+        input: torch.Tensor,
+        target: torch.Tensor,
+        model: SnapMixTransferLearningModel,
+    ):
 
         bs, _, H, W = input.size()
         img_size = (H, W)
         bs = input.size(0)
 
         with torch.no_grad():
-            fms  = model.encoder(input)
+            fms = model.encoder(input)
 
             # grab the classification layer of the model
             clsw = model.fc
 
             weight = clsw.weight.data
-            weight = weight.view(weight.size(0),weight.size(1),1,1)
-            bias   = clsw.bias.data
+            weight = weight.view(weight.size(0), weight.size(1), 1, 1)
+            bias = clsw.bias.data
 
-            fms      = F.relu(fms)
-            poolfea  = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
+            fms = F.relu(fms)
+            poolfea = F.adaptive_avg_pool2d(fms, (1, 1)).squeeze()
             clslogit = F.softmax(clsw.forward(poolfea))
 
             logitlist = []
 
             for i in range(bs):
-                logitlist.append(clslogit[i,target[i]])
+                logitlist.append(clslogit[i, target[i]])
 
             clslogit = torch.stack(logitlist)
 
@@ -195,13 +234,17 @@ class SnapMix():
 
             outmaps = []
             for i in range(bs):
-                evimap = out[i,target[i]]
+                evimap = out[i, target[i]]
                 outmaps.append(evimap)
 
             if img_size is not None:
                 outmaps = torch.stack(outmaps)
-                outmaps = outmaps.view(outmaps.size(0),1,outmaps.size(1),outmaps.size(2))
-                outmaps = F.interpolate(outmaps, img_size, mode='bilinear', align_corners=False)
+                outmaps = outmaps.view(
+                    outmaps.size(0), 1, outmaps.size(1), outmaps.size(2)
+                )
+                outmaps = F.interpolate(
+                    outmaps, img_size, mode="bilinear", align_corners=False
+                )
 
             outmaps = outmaps.squeeze()
 
@@ -211,9 +254,11 @@ class SnapMix():
 
         return outmaps, clslogit
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model: SnapMixTransferLearningModel):
+    def __call__(
+        self, xb: torch.Tensor, yb: torch.Tensor, model: SnapMixTransferLearningModel
+    ):
         r = np.random.rand(1)
-        self.xb  = xb
+        self.xb = xb
         self.yb1 = yb
 
         if r < self.conf_prob:
@@ -221,7 +266,7 @@ class SnapMix():
 
             bs, _, H, W = xb.size()
 
-            self.img_size = (H,W)
+            self.img_size = (H, W)
 
             if self.device is None:
                 self.device = xb.device
@@ -229,13 +274,12 @@ class SnapMix():
             lam_a = torch.ones(xb.size(0), device=self.device)
             lam_b = 1 - lam_a
 
-            self.yb  = yb
+            self.yb = yb
             self.yb1 = yb.clone()
 
             rand_index = torch.randperm(bs, device=self.device)
 
-
-            wfmaps,_  = self.get_spm(xb, yb, model)
+            wfmaps, _ = self.get_spm(xb, yb, model)
 
             lam = np.random.beta(self.distrib, self.distrib)
             lam = torch.tensor(lam, device=self.device)
@@ -245,7 +289,7 @@ class SnapMix():
 
             rand_index = torch.randperm(bs, device=self.device)
 
-            wfmaps_b = wfmaps[rand_index,:,:]
+            wfmaps_b = wfmaps[rand_index, :, :]
             self.yb1 = self.yb[rand_index]
 
             same_label = self.yb == self.yb1
@@ -253,25 +297,36 @@ class SnapMix():
             bbx1, bby1, bbx2, bby2 = self.rand_bbox(W, H, lam)
             bbx1_1, bby1_1, bbx2_1, bby2_1 = self.rand_bbox(W, H, lam1)
 
-            area  = (bby2-bby1)*(bbx2-bbx1)
-            area1 = (bby2_1-bby1_1)*(bbx2_1-bbx1_1)
+            area = (bby2 - bby1) * (bbx2 - bbx1)
+            area1 = (bby2_1 - bby1_1) * (bbx2_1 - bbx1_1)
 
-            if  area1 > 0 and  area>0:
+            if area1 > 0 and area > 0:
                 ncont = xb[rand_index, :, bbx1_1:bbx2_1, bby1_1:bby2_1].clone()
-                ncont = F.interpolate(ncont, size=(bbx2-bbx1,bby2-bby1), mode='bilinear', align_corners=True)
+                ncont = F.interpolate(
+                    ncont,
+                    size=(bbx2 - bbx1, bby2 - bby1),
+                    mode="bilinear",
+                    align_corners=True,
+                )
                 xb[:, :, bbx1:bbx2, bby1:bby2] = ncont
 
-                lam_a = 1 - wfmaps[:,bbx1:bbx2,bby1:bby2].sum(2).sum(1)/(wfmaps.sum(2).sum(1)+1e-8)
-                lam_b = wfmaps_b[:,bbx1_1:bbx2_1,bby1_1:bby2_1].sum(2).sum(1)/(wfmaps_b.sum(2).sum(1)+1e-8)
+                lam_a = 1 - wfmaps[:, bbx1:bbx2, bby1:bby2].sum(2).sum(1) / (
+                    wfmaps.sum(2).sum(1) + 1e-8
+                )
+                lam_b = wfmaps_b[:, bbx1_1:bbx2_1, bby1_1:bby2_1].sum(2).sum(1) / (
+                    wfmaps_b.sum(2).sum(1) + 1e-8
+                )
 
                 tmp = lam_a.clone()
 
                 lam_a[same_label] += lam_b[same_label]
                 lam_b[same_label] += tmp[same_label]
 
-                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (xb.size()[-1] * xb.size()[-2]))
+                lam = 1 - (
+                    (bbx2 - bbx1) * (bby2 - bby1) / (xb.size()[-1] * xb.size()[-2])
+                )
                 lam_a[torch.isnan(lam_a)] = lam
-                lam_b[torch.isnan(lam_b)] = 1-lam
+                lam_b[torch.isnan(lam_b)] = 1 - lam
 
             self.yb1, self.yb2 = self.yb, self.yb1
             self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
@@ -281,33 +336,42 @@ class SnapMix():
         return self.xb
 
     def __str__(self):
-        return f'Snampix ,conf_prob={self.conf_prob}, alpha={self.distrib}'
+        mix = namedtuple("SnapMix", ["probability", "alpha"])
+        return str(mix(self.conf_prob, self.distrib))
 
     def loss(self, lf, pred, *args, **kwargs):
         if self.is_active:
             loss_a = lf(pred, self.yb1)
             loss_b = lf(pred, self.yb2)
-            loss   = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+            loss = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
         if not self.is_active:
             loss = lf(pred, self.yb1)
         return loss
 
 # Cell
-class MixupAndCutmix():
-    def __init__(self, cutmix_alpha:float=1.0, mixup_alpha:float=0.4,
-                 switch_prob:float=0.5, conf_prob:float=0.5):
+class MixupAndCutmix:
+    def __init__(
+        self,
+        cutmix_alpha: float = 1.0,
+        mixup_alpha: float = 0.4,
+        switch_prob: float = 0.5,
+        conf_prob: float = 0.5,
+    ):
 
         self.cutmix = Cutmix(cutmix_alpha, conf_prob=1.0)
-        self.mixup  = Mixup(mixup_alpha, conf_prob=1.0)
+        self.mixup = Mixup(mixup_alpha, conf_prob=1.0)
         self.switch_prob, self.conf_prob = switch_prob, conf_prob
-
-        self.is_active   = False
+        self.cx_alpha, self.mx_aplha = cutmix_alpha, mixup_alpha
+        self.is_active = False
         self.curr_method = None
 
     def __str__(self):
-        return f'Cutmix/Mixup with switch_prob:{self.switch_prob}'
+        mix = namedtuple("Mixup_Cutmix", ["probability", "alphas", "switch_prob"])
+        return str(
+            mix(self.conf_prob, [self.mx_aplha, self.cx_alpha], self.switch_prob)
+        )
 
-    def __call__(self, xb:torch.Tensor, yb:torch.Tensor, model:Module=None):
+    def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
         r = np.random.rand(1)
         self.yb1 = yb
 

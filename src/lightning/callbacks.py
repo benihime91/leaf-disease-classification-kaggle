@@ -174,10 +174,10 @@ class PrintLogsCallback(pl.Callback):
         valid_loss = metrics["valid/loss"]
         valid_acc = metrics["valid/acc"]
         trn_res = self.TrainResult(
-            train_loss.data.cpu().numpy().item(),
-            train_acc.data.cpu().numpy().item(),
-            valid_loss.data.cpu().numpy().item(),
-            valid_acc.data.cpu().numpy().item(),
+            round(train_loss.data.cpu().numpy().item(), 2),
+            round(train_acc.data.cpu().numpy().item(), 2),
+            round(valid_loss.data.cpu().numpy().item(), 2),
+            round(valid_acc.data.cpu().numpy().item(), 2),
         )
 
         curr_epoch = int(trainer.current_epoch)
@@ -188,5 +188,5 @@ class PrintLogsCallback(pl.Callback):
         test_loss = metrics["test/loss"]
         test_acc = metrics["test/acc"]
         self.logger.info(
-            f"{self.TestResult(test_loss.data.cpu().numpy().item(), test_acc.data.cpu().numpy().item())}"
+            f"{self.TestResult(round(test_loss.data.cpu().numpy().item(), 2), round(test_acc.data.cpu().numpy().item(), 2))}"
         )

@@ -61,7 +61,7 @@ class CassavaLightningDataModule(pl.LightningDataModule):
         self.logger = logger
 
     def prepare_data(self):
-        dataInfo = namedtuple("DataInfo", ["fold", "batch_size", "im_path"])
+        dataInfo = namedtuple("Data", ["fold", "batch_size", "im_path"])
         self.logger.info(f"{dataInfo(self.curr_fold, self.bs, self.im_dir)}")
 
         self.train_df: pd.DataFrame = self.df.loc[self.df["is_valid"] == False]
@@ -219,7 +219,7 @@ class LightningCassava(pl.LightningModule):
         self.log_dict(metrics)
 
     def configure_optimizers(self):
-        optimResult = namedtuple("OptimINFO", ["optimizer", "scheduler", "lrs", "wd"])
+        optimResult = namedtuple("Optimizer", ["optimizer", "scheduler", "lrs", "wd"])
 
         param_list = [
             {"params": self.param_list[0], "lr": self.lr_list.encoder_lr},
