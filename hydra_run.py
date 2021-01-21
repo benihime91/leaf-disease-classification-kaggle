@@ -90,9 +90,7 @@ def cli_main(args: DictConfig):
     _ = trainer.test(datamodule=DATAMODULE, verbose=False, ckpt_path=ckpt_path)
 
     # load in the best model weights
-    CHECKPOINT = torch.load(ckpt_path)
-    LIGHTNING_MODEL.load_state_dict(CHECKPOINT["state_dict"])
-    log.info(f"Best weights loaded from checkpoint : {ckpt_path}")
+    LIGHTNING_MODEL.load_state_from_checkpoint(ckpt_path)
 
     # create model save dir
     os.makedirs(args.general.save_dir, exist_ok=True)
@@ -104,10 +102,8 @@ def cli_main(args: DictConfig):
     # upload trained weights to wandb
     wandb.save(PATH)
 
-    log.info("Cleaning up .... ")
-
     try:
-        conf_path = os.path.join(args.general.save_dir, "configFile.yaml")
+        conf_path = os.path.join(args.general.save_dir, "config-file.yaml")
         OmegaConf.save(args, f=conf_path)
         wandb.save(conf_path)
     except:
