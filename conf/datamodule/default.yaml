@@ -4,4 +4,4 @@ df_path: ${general.csv_path}
 im_dir: ${general.image_dir}
 curr_fold: 0
 bs: 16
-num_workers: 4
+num_workers: 0

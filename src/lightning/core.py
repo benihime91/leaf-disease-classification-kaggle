@@ -53,14 +53,17 @@ class CassavaLightningDataModule(pl.LightningDataModule):
 
         super().__init__()
         self.df = load_dataset(df_path, im_dir, curr_fold, True)
-        self.train_augs, self.valid_augs = train_augs, valid_augs
-        self.bs, self.workers = bs, num_workers
+        self.train_augs = train_augs
+        self.valid_augs = valid_augs
+
+        self.bs = bs
+        self.workers = num_workers
+
         self.curr_fold = curr_fold
         self.im_dir = im_dir
-
         self.logger = logger
 
-    def prepare_data(self):
+    def prepare_data(self) -> None:
         dataInfo = namedtuple("Data", ["fold", "batch_size", "im_path"])
         self.logger.info(f"{dataInfo(self.curr_fold, self.bs, self.im_dir)}")
 
@@ -70,26 +73,38 @@ class CassavaLightningDataModule(pl.LightningDataModule):
         self.train_df = self.train_df.reset_index(inplace=False, drop=True)
         self.valid_df = self.valid_df.reset_index(inplace=False, drop=True)
 
-    def setup(self, stage=None):
+    def setup(self, stage=None) -> None:
         if stage == "fit" or stage is None:
             self.train_ds = ImageClassificationFromDf(self.train_df, self.train_augs)
             self.valid_ds = ImageClassificationFromDf(self.valid_df, self.valid_augs)
         if stage == "test" or stage is None:
             self.test_ds = ImageClassificationFromDf(self.valid_df, self.valid_augs)
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(
-            self.train_ds, shuffle=True, batch_size=self.bs, num_workers=self.workers
+            self.train_ds,
+            shuffle=True,
+            batch_size=self.bs,
+            num_workers=self.workers,
+            pin_memory=True if torch.cuda.is_available() else False,
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(
-            self.valid_ds, batch_size=self.bs, num_workers=self.workers, shuffle=False
+            self.valid_ds,
+            batch_size=self.bs,
+            num_workers=self.workers,
+            shuffle=False,
+            pin_memory=True if torch.cuda.is_available() else False,
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         return DataLoader(
-            self.test_ds, batch_size=self.bs, num_workers=self.workers, shuffle=False
+            self.test_ds,
+            batch_size=self.bs,
+            num_workers=self.workers,
+            shuffle=False,
+            pin_memory=True if torch.cuda.is_available() else False,
         )
 
 # Cell
@@ -141,6 +156,9 @@ class LightningCassava(pl.LightningModule):
         self.model = model
         self.accuracy = pl.metrics.Accuracy()
         self.save_hyperparameters(conf)
+
+        if isinstance(self.model, VisionTransformer):
+            self._log.warning("Use class src.lightning.core.LightningVisionTransformer")
 
         try:
             mixmethod = instantiate(self.hparams["mixmethod"])
@@ -227,27 +245,16 @@ class LightningCassava(pl.LightningModule):
         ]
 
         opt = instantiate(self.hparams.optimizer, params=param_list)
+        sch = fetch_scheduler(opt, self.hparams, self)
 
-        if self.hparams.scheduler.function._target_ is not None:
-            sch = fetch_scheduler(opt, self.hparams, self)
-            info = optimResult(
-                opt.__class__.__name__,
-                sch["scheduler"].__class__.__name__,
-                self.lr_list,
-                self.hparams.optimizer.weight_decay,
-            )
-            self._log.info(f"{info}")
-            return [opt], [sch]
-
-        else:
-            info = optimResult(
-                opt.__class__.__name__,
-                None,
-                self.lr_list,
-                self.hparams.optimizer.weight_decay,
-            )
-            self._log.info(f"{info}")
-            return [opt]
+        opt_info = optimResult(
+            opt.__class__.__name__,
+            sch["scheduler"].__class__.__name__,
+            self.lr_list,
+            self.hparams.optimizer.weight_decay,
+        )
+        self._log.info(f"{opt_info}")
+        return [opt], [sch]
 
     @property
     def lr_list(self) -> namedtuple:
@@ -358,7 +365,6 @@ class LightningVisionTransformer(pl.LightningModule):
         self.val_labels_list = self.val_labels_list + list(val_labels)
 
         metrics = {"valid/loss": loss, "valid/acc": acc}
-
         self.log_dict(metrics)
 
     def test_step(self, batch, batch_idx):
@@ -372,7 +378,7 @@ class LightningVisionTransformer(pl.LightningModule):
         self.log_dict(metrics)
 
     def configure_optimizers(self):
-        optimResult = namedtuple("OptimINFO", ["optimizer", "scheduler", "lrs", "wd"])
+        optimResult = namedtuple("Optimizer", ["optimizer", "scheduler", "lrs", "wd"])
 
         param_list = [
             {"params": self.param_list[0], "lr": self.lr_list.encoder_lr},
@@ -380,27 +386,16 @@ class LightningVisionTransformer(pl.LightningModule):
         ]
 
         opt = instantiate(self.hparams.optimizer, params=param_list)
+        sch = fetch_scheduler(opt, self.hparams, self)
 
-        if self.hparams.scheduler.function._target_ is not None:
-            sch = fetch_scheduler(opt, self.hparams, self)
-            info = optimResult(
-                opt.__class__.__name__,
-                sch["scheduler"].__class__.__name__,
-                self.lr_list,
-                self.hparams.optimizer.weight_decay,
-            )
-            self._log.info(f"{info}")
-            return [opt], [sch]
-
-        else:
-            info = optimResult(
-                opt.__class__.__name__,
-                None,
-                self.lr_list,
-                self.hparams.optimizer.weight_decay,
-            )
-            self._log.info(f"{info}")
-            return [opt]
+        opt_info = optimResult(
+            opt.__class__.__name__,
+            sch["scheduler"].__class__.__name__,
+            self.lr_list,
+            self.hparams.optimizer.weight_decay,
+        )
+        self._log.info(f"{opt_info}")
+        return [opt], [sch]
 
     @property
     def lr_list(self) -> namedtuple:
@@ -412,7 +407,7 @@ class LightningVisionTransformer(pl.LightningModule):
 
     @property
     def param_list(self):
-        "returns the list of parameters [params of encoder, params of fc]"
+        "returns the list of parameters [(params of the model - params of head), params of head]"
         model_params = params(self.model)[:-2]
         head_params = params(self.model.model.head)
         param_list = [model_params, head_params]
@@ -420,18 +415,23 @@ class LightningVisionTransformer(pl.LightningModule):
 
     def load_state_from_checkpoint(self, path: str):
         "loads in the weights of the LightningModule from given checkpoint"
+        self._log.info(f"Attempting to load checkpoint {path}")
         checkpoint = torch.load(path, map_location=self.device)
+        self._log.info(f"Successfully loaded checkpoint {path}")
+
         self.load_state_dict(checkpoint["state_dict"])
-        self._log.info(f"Weights loaded from checkpoint : {path}")
+        self._log.info(f"Successfully loaded weights from checkpoint {path}")
 
     def save_model_weights(self, path: str):
         "saves weights of self.model"
+        self._log.info(f"Attempting to save weights to {path}")
         state = self.model.state_dict()
         torch.save(state, path)
-        self._log.info(f"weights saved to {path}")
+        self._log.info(f"Successfully saved weights to {path}")
 
     def load_model_weights(self, path: str):
         "loads weights of self.model"
+        self._log.info(f"Attempting to load weights from {path}")
         state_dict = torch.load(path)
         self.model.load_state_dict(state_dict)
-        self._log.info(f"weights loaded from {path}")
+        self._log.info(f"Successfully loaded weights from {path}")
