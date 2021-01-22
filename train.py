@@ -1,10 +1,29 @@
-import gc
+""" Training Script
+This script can be used to launch a training job. The config for the training can be modified
+in the conf/ directory. This script uses hydra to configure the training job. 
+See (https://hydra.cc/docs/intro/)
+
+Config can also be modified from the command line.
+See (https://hydra.cc/docs/advanced/overriding_packages).
+
+For training this script utilizes the pytorch-lightning training. Modify the default configuration of the 
+trainer in conf/trainer.
+
+Image augmentations are applied from albumentations (https://albumentations.ai/docs/). 
+Modify the augmentations in conf/augmentations.
+
+Optimizer and Scheduler config can be modified in conf/optimizer & conf/scheduler respectively.
+
+The main aim of the scipt is to iterate over different experimentations with minimal changes.
+
+Note: To use the lr_finder algorithm to get a good starting learning rate, run the script finder.py.
+See (https://pytorch-lightning.readthedocs.io/en/latest/lr_finder.html)
+"""
 import logging
 import os
 
 import albumentations as A
 import hydra
-import pytorch_lightning as pl
 import torch
 import wandb
 from hydra.utils import instantiate
