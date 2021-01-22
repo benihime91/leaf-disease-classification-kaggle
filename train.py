@@ -19,7 +19,6 @@ The main aim of the scipt is to iterate over different experimentations with min
 Note: To use the lr_finder algorithm to get a good starting learning rate, run the script finder.py.
 See (https://pytorch-lightning.readthedocs.io/en/latest/lr_finder.html)
 """
-import logging
 import os
 
 import albumentations as A
@@ -29,16 +28,12 @@ import wandb
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import (
-    EarlyStopping,
-    LearningRateMonitor,
-    ModelCheckpoint,
-)
+from pytorch_lightning.callbacks import (EarlyStopping, LearningRateMonitor,
+                                         ModelCheckpoint)
+from pytorch_lightning.core.datamodule import LightningDataModule
 from pytorch_lightning.loggers import WandbLogger
 
 from src.all import *
-
-log = logging.getLogger(__name__)
 
 
 def main(cfg: DictConfig):
@@ -86,8 +81,8 @@ def main(cfg: DictConfig):
     # initialize pytorch_lightning Trainer + Callbacks
     cbs = [
         WandbImageClassificationCallback(log_conf_mat=True),
-        LitProgressBar(),
-        PrintLogsCallback(),
+        DisableProgressBar(),
+        ConsoleLogger(),
         LearningRateMonitor(cfg.scheduler.scheduler_interval),
         EarlyStopping(monitor="valid/acc", mode="max"),
     ]
@@ -98,6 +93,8 @@ def main(cfg: DictConfig):
     trainer: Trainer = instantiate(cfg.trainer, **_trn_kwargs)
 
     # Start Train + Validation
+    loaders.prepare_data()
+    loaders.setup()
     trainer.fit(model, datamodule=loaders)
 
     # Laod in the best checkpoint and save the model weights
