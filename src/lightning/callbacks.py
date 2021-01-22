@@ -17,7 +17,7 @@ import wandb
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning import _logger as log
-from pytorch_lightning.core.memory import ModelSummary
+from pytorch_lightning.core.memory import ModelSummary, get_human_readable_count
 
 from ..all import *
 
@@ -153,10 +153,10 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
 # Cell
 class PrintLogsCallback(pl.Callback):
     "Logs Training logs to console after every epoch"
-    TrainResult = namedtuple("TrainResult", ["loss", "acc", "valid_loss", "valid_acc"])
-    TestResult = namedtuple("TestResult", ["test_loss", "test_acc"])
+    TrainResult = namedtuple("TrainOutput", ["loss", "acc", "valid_loss", "valid_acc"])
+    TestResult = namedtuple("TestOutput", ["test_loss", "test_acc"])
 
-    logger = logging.getLogger("src.logs")
+    logger = logging.getLogger("_train_")
 
     def on_epoch_end(self, trainer, pl_module):
         metrics = trainer.callback_metrics
@@ -172,7 +172,7 @@ class PrintLogsCallback(pl.Callback):
         )
 
         curr_epoch = int(trainer.current_epoch)
-        self.logger.info(f"[{curr_epoch}]: (100.00% done), {trn_res}")
+        self.logger.info(f"EPOCH {curr_epoch}: {trn_res}")
 
     def on_test_epoch_end(self, trainer, pl_module, *args, **kwargs):
         metrics = trainer.callback_metrics
@@ -234,44 +234,67 @@ class DisableProgressBar(pl.callbacks.ProgressBar):
 # Cell
 class ConsoleLogger(pl.Callback):
     "Fancy logger for console-logging"
-
-    tst_res = namedtuple("TestResult", ["test_loss", "test_acc"])
-    trn_res = namedtuple("TrainResult", ["loss", "acc", "val_loss", "val_acc"])
+    trn_res = namedtuple("TrainOutput", ["loss", "acc", "val_loss", "val_acc"])
+    tst_res = namedtuple("TestOutput", ["test_loss", "test_acc"])
     curr_step = 0
     has_init = False
-    logger = logging.getLogger("src.log")
+    logger = logging.getLogger("_train_")
 
     def __init__(self, print_every: int = 50):
         self.print_every = print_every
 
-    def on_fit_start(self, trainer, pl_module, *args, **kwargs):
+    def on_train_start(self, trainer, pl_module, *args, **kwargs):
         if not self.has_init:
+            cfg = pl_module.hparams
+
             self.log_line()
-            self.log_msg(f"Model: \n{ModelSummary(trainer.model)}")
-            self.log_line()
-            self.log_msg(f"Parameters:")
-            self.log_msg(f" - max_epochs: {trainer.max_epochs}")
-            self.log_msg(f" - accumulate_batches: {trainer.accumulate_grad_batches}")
-            self.log_msg(f" - gradient_clipping: {trainer.gradient_clip_val}")
-            self.log_line()
+            self.log_msg(f"Model:")
             self.log_msg(
-                f"DATASET: 'data: {len(pl_module.train_dataloader())} train + {len(pl_module.val_dataloader())} valid + {len(pl_module.test_dataloader())} test batches'"
+                f" - model_class: {str(cfg.network.transfer_learning_model._target_).split('.')[-1]}"
             )
+            self.log_msg(f" - base_model: {cfg.encoder}")
+            summary = ModelSummary(pl_module)
+            self.log_msg(
+                f" - total_parameters: {get_human_readable_count(summary.param_nums[0])}"
+            )
+            self.log_line()
+
+            self.log_msg(f"Dataset:")
+            self.log_msg(f" - path: {os.path.relpath(cfg.datamodule.im_dir)}")
+            self.log_msg(f" - validation_fold: {str(cfg.datamodule.curr_fold)}")
+            self.log_msg(
+                f" - {len(pl_module.train_dataloader())} train + {len(pl_module.val_dataloader())} valid + {len(pl_module.test_dataloader())} test batches"
+            )
+            self.log_line()
+
+            self.log_msg(f"Parameters:")
+            self.log_msg(f" - input_dimensions: {(cfg.image_dims, cfg.image_dims, 3)}")
+            self.log_msg(f" - max_epochs: {trainer.max_epochs}")
+            self.log_msg(f" - mini_batch_size: {str(cfg.datamodule.bs)}")
+            self.log_msg(f" - accumulate_batches: {trainer.accumulate_grad_batches}")
+            self.log_msg(f" - optimizer: {str(cfg.optimizer._target_).split('.')[-1]}")
+            self.log_msg(f" - learning_rates: {str(pl_module.lr_list)}")
+            self.log_msg(f" - weight_decay: {str(cfg.optimizer.weight_decay)}")
+            self.log_msg(
+                f" - lr scheduler: {str(cfg.scheduler.function._target_).split('.')[-1]}"
+            )
+            self.log_msg(f" - gradient_clipping: {trainer.gradient_clip_val}")
+            self.log_msg(f" - loss_function: {pl_module.loss_func}")
 
             has_init = True
 
-    def on_epoch_start(self, *args, **kwargs):
-        self.log_line()
-
-    def on_train_start(self, trainer, pl_module, *args, **kwargs):
         self.log_line()
         self.log_msg("STAGE: TRAIN / VALIDATION")
         self.log_line()
         self.log_msg(
             f"Model training base path: {os.path.relpath(trainer.checkpoint_callback.dirpath)}"
         )
+
         self.log_line()
         self.log_msg(f"Device: {pl_module.device}")
+
+    def on_epoch_start(self, *args, **kwargs):
+        self.log_line()
 
     def on_train_epoch_start(self, *args, **kwargs):
         # resets the current step
@@ -315,6 +338,7 @@ class ConsoleLogger(pl.Callback):
         self.log_line()
 
     def on_test_start(self, trainer, pl_module, *args, **kwargs):
+        self.has_init = False
         self.log_line()
         self.log_msg("STAGE: TEST")
         self.log_line()

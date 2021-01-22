@@ -6,7 +6,6 @@ __all__ = ['CassavaLightningDataModule', 'fetch_scheduler', 'LightningCassava', 
 import os
 from typing import Dict, List
 from collections import namedtuple
-import logging
 
 import albumentations as A
 import pandas as pd
@@ -53,14 +52,8 @@ class CassavaLightningDataModule(pl.LightningDataModule):
 
         self.curr_fold = curr_fold
         self.im_dir = im_dir
-        self.logger = logging.getLogger("datamodule")
 
     def prepare_data(self) -> None:
-        dataInfo = namedtuple("Data", ["fold", "batch_size", "im_path"])
-        self.logger.info(
-            f"{dataInfo(self.curr_fold, self.bs, os.path.relpath(self.im_dir))}"
-        )
-
         self.train_df: pd.DataFrame = self.df.loc[self.df["is_valid"] == False]
         self.valid_df: pd.DataFrame = self.df.loc[self.df["is_valid"] == True]
 
@@ -143,13 +136,11 @@ class LightningCassava(pl.LightningModule):
 
     def __init__(self, model, conf: DictConfig):
         super().__init__()
-        # set up logging within the lightning-module
-        self._log = logging.getLogger("LitModel")
 
         # set up init args
+        self.save_hyperparameters(conf)
         self.model = model
         self.accuracy = pl.metrics.Accuracy()
-        self.save_hyperparameters(conf)
 
         if isinstance(self.model, VisionTransformer):
             self._log.warning("Use class src.lightning.core.LightningVisionTransformer")
@@ -165,12 +156,6 @@ class LightningCassava(pl.LightningModule):
 
         self.mix_fn = mixmethod
         self.loss_func = instantiate(self.hparams["loss"])
-
-        if self.mix_fn is not None:
-            self._log.info(f"Mixmethod : {self.mix_fn}")
-
-        self._log.info(f"Loss Function : {self.loss_func}")
-
         self.val_labels_list = []
         self.val_preds_list = []
         self.one_batch = None
@@ -231,8 +216,6 @@ class LightningCassava(pl.LightningModule):
         self.log_dict(metrics)
 
     def configure_optimizers(self):
-        optimResult = namedtuple("Optimizer", ["optimizer", "scheduler", "lrs", "wd"])
-
         param_list = [
             {"params": self.param_list[0], "lr": self.lr_list.encoder_lr},
             {"params": self.param_list[1], "lr": self.lr_list.fc_lr},
@@ -240,14 +223,6 @@ class LightningCassava(pl.LightningModule):
 
         opt = instantiate(self.hparams.optimizer, params=param_list)
         sch = fetch_scheduler(opt, self.hparams, self)
-
-        opt_info = optimResult(
-            opt.__class__.__name__,
-            sch["scheduler"].__class__.__name__,
-            self.lr_list,
-            self.hparams.optimizer.weight_decay,
-        )
-        self._log.info(f"Optimization Parameters: \n{opt_info}")
         return [opt], [sch]
 
     @property
@@ -266,26 +241,26 @@ class LightningCassava(pl.LightningModule):
 
     def load_state_from_checkpoint(self, path: str):
         "loads in the weights of the LightningModule from given checkpoint"
-        self._log.info(f"Attempting to load checkpoint {path}")
+        self._log.info(f"Attempting to load checkpoint {os.path.relpath(path)}")
         checkpoint = torch.load(path, map_location=self.device)
-        self._log.info(f"Successfully loaded checkpoint {path}")
+        self._log.info(f"Successfully loaded checkpoint {os.path.relpath(path)}")
 
         self.load_state_dict(checkpoint["state_dict"])
         self._log.info(f"Successfully loaded weights from checkpoint {path}")
 
     def save_model_weights(self, path: str):
         "saves weights of self.model"
-        self._log.info(f"Attempting to save weights to {path}")
+        self._log.info(f"Attempting to save weights to {os.path.relpath(path)}")
         state = self.model.state_dict()
         torch.save(state, path)
-        self._log.info(f"Successfully saved weights to {path}")
+        self._log.info(f"Successfully saved weights to {os.path.relpath(path)}")
 
     def load_model_weights(self, path: str):
         "loads weights of self.model"
-        self._log.info(f"Attempting to load weights from {path}")
+        self._log.info(f"Attempting to load weights from {os.path.relpath(path)}")
         state_dict = torch.load(path)
         self.model.load_state_dict(state_dict)
-        self._log.info(f"Successfully loaded weights from {path}")
+        self._log.info(f"Successfully loaded weights from {os.path.relpath(path)}")
 
 # Cell
 # @TODO: Add Snapmix support
@@ -294,10 +269,9 @@ class LightningVisionTransformer(pl.LightningModule):
 
     def __init__(self, model: VisionTransformer, conf: DictConfig = None):
         super().__init__()
-        self.model = model
-        self._log = logging.getLogger("LitModel")
-        self.accuracy = pl.metrics.Accuracy()
         self.save_hyperparameters(conf)
+        self.model = model
+        self.accuracy = pl.metrics.Accuracy()
 
         try:
             mixmethod = instantiate(self.hparams["mixmethod"])
@@ -311,12 +285,6 @@ class LightningVisionTransformer(pl.LightningModule):
 
         self.mix_fn = mixmethod
         self.loss_func = instantiate(self.hparams["loss"])
-
-        if self.mix_fn is not None:
-            self._log.info(f"Mixmethod : {self.mix_fn}")
-
-        self._log.info(f"Loss Function : {self.loss_func}")
-
         self.val_labels_list = []
         self.val_preds_list = []
         self.one_batch = None
@@ -372,8 +340,6 @@ class LightningVisionTransformer(pl.LightningModule):
         self.log_dict(metrics)
 
     def configure_optimizers(self):
-        optimResult = namedtuple("Optimizer", ["optimizer", "scheduler", "lrs", "wd"])
-
         param_list = [
             {"params": self.param_list[0], "lr": self.lr_list.encoder_lr},
             {"params": self.param_list[1], "lr": self.lr_list.fc_lr},
@@ -381,14 +347,6 @@ class LightningVisionTransformer(pl.LightningModule):
 
         opt = instantiate(self.hparams.optimizer, params=param_list)
         sch = fetch_scheduler(opt, self.hparams, self)
-
-        opt_info = optimResult(
-            opt.__class__.__name__,
-            sch["scheduler"].__class__.__name__,
-            self.lr_list,
-            self.hparams.optimizer.weight_decay,
-        )
-        self._log.info(f"Optimization Parameters: \n{opt_info}")
         return [opt], [sch]
 
     @property
@@ -409,23 +367,23 @@ class LightningVisionTransformer(pl.LightningModule):
 
     def load_state_from_checkpoint(self, path: str):
         "loads in the weights of the LightningModule from given checkpoint"
-        self._log.info(f"Attempting to load checkpoint {path}")
+        self._log.info(f"Attempting to load checkpoint {os.path.relpath(path)}")
         checkpoint = torch.load(path, map_location=self.device)
-        self._log.info(f"Successfully loaded checkpoint {path}")
+        self._log.info(f"Successfully loaded checkpoint {os.path.relpath(path)}")
 
         self.load_state_dict(checkpoint["state_dict"])
         self._log.info(f"Successfully loaded weights from checkpoint {path}")
 
     def save_model_weights(self, path: str):
         "saves weights of self.model"
-        self._log.info(f"Attempting to save weights to {path}")
+        self._log.info(f"Attempting to save weights to {os.path.relpath(path)}")
         state = self.model.state_dict()
         torch.save(state, path)
-        self._log.info(f"Successfully saved weights to {path}")
+        self._log.info(f"Successfully saved weights to {os.path.relpath(path)}")
 
     def load_model_weights(self, path: str):
         "loads weights of self.model"
-        self._log.info(f"Attempting to load weights from {path}")
+        self._log.info(f"Attempting to load weights from {os.path.relpath(path)}")
         state_dict = torch.load(path)
         self.model.load_state_dict(state_dict)
-        self._log.info(f"Successfully loaded weights from {path}")
+        self._log.info(f"Successfully loaded weights from {os.path.relpath(path)}")
