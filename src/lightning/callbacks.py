@@ -9,6 +9,7 @@ import sys
 import time
 import datetime
 import logging
+import time
 from collections import namedtuple
 from tqdm.auto import tqdm
 
@@ -153,10 +154,10 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
 # Cell
 class PrintLogsCallback(pl.Callback):
     "Logs Training logs to console after every epoch"
-    TrainResult = namedtuple("TrainOutput", ["loss", "acc", "valid_loss", "valid_acc"])
+    TrainResult = namedtuple("TrainOutput", ["loss", "acc", "val_loss", "val_acc"])
     TestResult = namedtuple("TestOutput", ["test_loss", "test_acc"])
 
-    logger = logging.getLogger("_train_")
+    logger = logging.getLogger("Trainer")
 
     def on_epoch_end(self, trainer, pl_module):
         metrics = trainer.callback_metrics
@@ -238,7 +239,7 @@ class ConsoleLogger(pl.Callback):
     tst_res = namedtuple("TestOutput", ["test_loss", "test_acc"])
     curr_step = 0
     has_init = False
-    logger = logging.getLogger("_train_")
+    logger = logging.getLogger("Trainer")
 
     def __init__(self, print_every: int = 50):
         self.print_every = print_every
@@ -280,6 +281,7 @@ class ConsoleLogger(pl.Callback):
             )
             self.log_msg(f" - gradient_clipping: {trainer.gradient_clip_val}")
             self.log_msg(f" - loss_function: {pl_module.loss_func}")
+            self.log_msg(f" - mix_method: {pl_module.mix_fn}")
 
             has_init = True
 
@@ -298,18 +300,32 @@ class ConsoleLogger(pl.Callback):
 
     def on_train_epoch_start(self, *args, **kwargs):
         # resets the current step
-        self.curr_step = 0
+        self.curr_step  = 0
+        self.batch_time = 0
+        self.seen_batches = 0
+
+    def on_train_batch_start(self, *args, **kwargs):
+        self.start_time = time.time()
 
     def on_train_batch_end(self, trainer, pl_module, *args, **kwargs):
+        ep = trainer.current_epoch
+        tots = len(pl_module.train_dataloader())
+
+        mini_batch_size = pl_module.hparams.datamodule.bs
+
+        self.seen_batches += 1
+        self.batch_time += time.time() - self.start_time
+
         if self.curr_step % self.print_every == 0:
-            ep = trainer.current_epoch
-            tots = len(pl_module.train_dataloader())
             _stp_metrics = trainer.callback_metrics
             _stp_loss = _stp_metrics["train/loss_step"]
             _stp_acc = _stp_metrics["train/acc_step"]
 
+            seen_samples = mini_batch_size * self.seen_batches
+
             self.log_msg(
-                f"epoch - {ep} - iteration {self.curr_step + 1}/{tots+1} - loss {_stp_loss:.3f} - acc {_stp_loss:.3f}"
+                f"epoch - {ep} - iter {self.curr_step}/{tots} - loss "
+                f"{_stp_loss:.3f} - acc {_stp_loss:.3f} - samples/sec: {seen_samples / self.batch_time:.2f}"
             )
 
         self.curr_step += 1
@@ -334,9 +350,6 @@ class ConsoleLogger(pl.Callback):
         self.log_line()
         self.log_msg(f"EPOCH {curr_epoch}: {_res}")
 
-    def on_fit_end(self, *args, **kwargs):
-        self.log_line()
-
     def on_test_start(self, trainer, pl_module, *args, **kwargs):
         self.has_init = False
         self.log_line()
@@ -356,6 +369,9 @@ class ConsoleLogger(pl.Callback):
         self.log_msg(
             f"{self.tst_res(round(test_loss.data.cpu().numpy().item(), 2), round(test_acc.data.cpu().numpy().item(), 2))}"
         )
+
+    def on_fit_end(self, *args, **kwargs):
+        self.log_line()
 
     def log_line(self):
         self.logger.info("-" * 70)
