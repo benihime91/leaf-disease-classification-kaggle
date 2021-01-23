@@ -68,7 +68,7 @@ def main(cfg: DictConfig):
         apply_init(net.fc, torch.nn.init.kaiming_normal_)
     except:
         # for vision transformer
-        apply_init(net.model.head, torch.nn.init.kaiming_normal_)
+        apply_init(net.model.model.head, torch.nn.init.kaiming_normal_)
 
     # init the LightingDataModule + LightningModule
     if isinstance(net, VisionTransformer):
@@ -82,7 +82,7 @@ def main(cfg: DictConfig):
     cbs = [
         WandbImageClassificationCallback(log_conf_mat=True),
         DisableProgressBar(),
-        ConsoleLogger(),
+        ConsoleLogger(print_every=100),
         LearningRateMonitor(cfg.scheduler.scheduler_interval),
         EarlyStopping(monitor="valid/acc", mode="max"),
     ]
