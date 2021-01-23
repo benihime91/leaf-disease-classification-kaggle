@@ -61,7 +61,8 @@ def main(cfg: DictConfig):
     _path = os.path.join(cfg.general.save_dir, f"lr-finder-plot.png")
     fig.savefig(_path)
 
-    logger.info(f"Suggested LR's : {lr_finder.suggestion().:6f}")
+    logger.info("Compiling Lr-Finder results ...")
+    logger.info(f"Suggested LR's : {lr_finder.suggestion():.7f}")
     logger.info(f"Results saved to {_path}")
 
 
