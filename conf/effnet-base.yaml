@@ -7,7 +7,6 @@ defaults:
   - mixmethod: default
   - optimizer: adamw
   - scheduler: linear-warmup
-  - activation: relu
   - loss: bi-tempered-logistic-loss
   - general: kaggle
   - trainer: default

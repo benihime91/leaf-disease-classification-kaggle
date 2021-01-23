@@ -7,7 +7,6 @@ defaults:
   - mixmethod: default
   - optimizer: adamw
   - scheduler: linear-warmup
-  - activation: relu
   - loss: labelsmoothing
   - general: kaggle
   - trainer: default

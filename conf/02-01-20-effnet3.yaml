@@ -7,7 +7,6 @@ defaults:
   - mixmethod: snapmix
   - optimizer: adam
   - scheduler: cosine-warmup
-  - activation: relu
   - loss: labelsmoothing
   - general: kaggle
   - trainer: default
