@@ -291,7 +291,6 @@ class ConsoleLogger(pl.Callback):
         self.log_msg(
             f"Model training base path: {os.path.relpath(trainer.checkpoint_callback.dirpath)}"
         )
-
         self.log_line()
         self.log_msg(f"Device: {pl_module.device}")
 
@@ -300,9 +299,11 @@ class ConsoleLogger(pl.Callback):
 
     def on_train_epoch_start(self, *args, **kwargs):
         # resets the current step
-        self.curr_step  = 0
+        self.curr_step = 0
         self.batch_time = 0
         self.seen_batches = 0
+        self._stp_loss = 0
+        self._stp_acc = 0
 
     def on_train_batch_start(self, *args, **kwargs):
         self.start_time = time.time()
@@ -313,19 +314,20 @@ class ConsoleLogger(pl.Callback):
 
         mini_batch_size = pl_module.hparams.datamodule.bs
 
+        _stp_metrics = trainer.callback_metrics
+
         self.seen_batches += 1
         self.batch_time += time.time() - self.start_time
 
+        self._stp_loss += _stp_metrics["train/loss_step"]
+        self._stp_acc += _stp_metrics["train/acc_step"]
+
         if self.curr_step % self.print_every == 0:
-            _stp_metrics = trainer.callback_metrics
-            _stp_loss = _stp_metrics["train/loss_step"]
-            _stp_acc = _stp_metrics["train/acc_step"]
-
             seen_samples = mini_batch_size * self.seen_batches
-
             self.log_msg(
                 f"epoch - {ep} - iter {self.curr_step}/{tots} - loss "
-                f"{_stp_loss:.3f} - acc {_stp_loss:.3f} - samples/sec: {seen_samples / self.batch_time:.2f}"
+                f"{self._stp_loss / self.seen_batches: .3f} - acc {self._stp_acc / self.seen_batches: .3f} "
+                f"- samples/sec: {seen_samples / self.batch_time: .2f}"
             )
 
         self.curr_step += 1
