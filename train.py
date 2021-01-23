@@ -38,7 +38,7 @@ def main(cfg: DictConfig):
     wb_logger = WandbLogger(project=cfg.general.project_name, log_model=True)
     wb_logger.log_hyperparams(cfg)
 
-    seed = seed_everything(cfg.general.random_seed)
+    _ = seed_everything(cfg.general.random_seed)
 
     if cfg.general.unique_idx is None:
         cfg.general.unique_idx = generate_random_id()
@@ -55,7 +55,12 @@ def main(cfg: DictConfig):
     else:
         act_func = None
 
-    net = instantiate(cfg.network.model, act_layer=act_func)
+    # with timm models pass in act_layer args to modify the activations layers
+    try:
+        net = instantiate(cfg.network.model, act_layer=act_func)
+    except:
+        # @TODO: find a way to replace activations with mdoels from pretrainedmdeols lib
+        net = instantiate(cfg.network.model)
 
     # build the transfer learning network
     net = instantiate(
@@ -67,7 +72,7 @@ def main(cfg: DictConfig):
         model = LightningVisionTransformer(net, conf=cfg)
     else:
         model = LightningCassava(net, conf=cfg)
-
+    # set up data-module for training
     loaders = instantiate(cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs,)
 
     # initialize pytorch_lightning Trainer + Callbacks
@@ -79,7 +84,7 @@ def main(cfg: DictConfig):
     ]
 
     chkpt_cb = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
-
+    # set up trainder kwargs
     _trn_kwargs = dict(checkpoint_callback=chkpt_cb, callbacks=cbs, logger=wb_logger)
     trainer: Trainer = instantiate(cfg.trainer, **_trn_kwargs)
 
