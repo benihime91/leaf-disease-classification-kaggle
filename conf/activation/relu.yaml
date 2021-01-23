@@ -1,3 +1,0 @@
-# @package activation
-_target_: torch.nn.ReLU
-inplace: true

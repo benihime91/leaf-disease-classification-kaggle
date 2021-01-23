@@ -7,3 +7,5 @@ model:
 transfer_learning_model:
   _target_: src.networks.VisionTransformer
   c: 5
+
+activation: null

@@ -7,3 +7,6 @@ transfer_learning_model:
   _target_: src.networks.TransferLearningModel
   cut: -2
   c: 5
+  lin_ftrs: 512
+
+activation: null
