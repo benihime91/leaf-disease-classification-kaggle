@@ -2,3 +2,4 @@
 _target_: src.mixmethods.SnapMix
 alpha: 5.0
 conf_prob: 1.0
+steps: null

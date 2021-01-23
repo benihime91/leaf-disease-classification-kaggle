@@ -4,6 +4,7 @@ __all__ = ['CassavaLightningDataModule', 'fetch_scheduler', 'LightningCassava', 
 
 # Cell
 import os
+import logging
 from typing import Dict, List
 from collections import namedtuple
 
@@ -133,6 +134,8 @@ def fetch_scheduler(optim, conf: DictConfig, litm: pl.LightningModule) -> Dict:
 # TODO: add midlevel classification branch in learning.
 class LightningCassava(pl.LightningModule):
     """LightningModule wrapper for `TransferLearningModel`"""
+    _log = logging.getLogger(__name__)
+    _log.setLevel(logging.INFO)
 
     def __init__(self, model, conf: DictConfig):
         super().__init__()
@@ -266,6 +269,8 @@ class LightningCassava(pl.LightningModule):
 # @TODO: Add Snapmix support
 class LightningVisionTransformer(pl.LightningModule):
     """LightningModule wrapper for `VisionTransfer`"""
+    _log = logging.getLogger(__name__)
+    _log.setLevel(logging.INFO)
 
     def __init__(self, model: VisionTransformer, conf: DictConfig = None):
         super().__init__()

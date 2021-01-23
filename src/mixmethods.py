@@ -3,21 +3,15 @@
 __all__ = ['NoneReduce', 'Mixup', 'Cutmix', 'SnapMix', 'MixupAndCutmix']
 
 # Cell
-import torch
-import torch.nn.functional as F
 import numpy as np
-from torch.distributions.beta import Beta
-from torch.nn import Module
-from torch import tensor
-
 from functools import partial
 from collections import namedtuple
 
+import torch
+import torch.nn.functional as F
+from torch.nn import Module
+
 from .core import *
-from .layers import *
-from .networks import *
-from .losses import *
-from .opts import *
 
 # Cell
 # from : https://github.com/fastai/fastai/blob/493023513ddd5157647bd10e9cebbbbdc043474c/fastai/layers.py#L582
@@ -42,17 +36,43 @@ class NoneReduce:
 # Cell
 # modified from : https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
 class Mixup:
-    "Implements mixup from https://arxiv.org/abs/1710.09412"
+    """Implements mixup from https://arxiv.org/abs/1710.09412
 
-    def __init__(self, alpha: float = 0.4, conf_prob=1.0):
+    Args:
+        alpha (float): mixup alpha value.
+        conf_prob (float): probability of applying mixup per batch or elements
+        steps (int): number of batches or elements to apply mixup
+    """
+
+    def __init__(self, alpha: float = 0.4, conf_prob: float = 1.0, steps: int = None):
         self.distrib = alpha
-        self.device = None
         self.conf_prob = conf_prob
+
+        if steps is None:
+            self.steps = 100000000
+        else:
+            self.steps = steps
+
+        self.device = None
         self.is_active = False
+        self.curr_step = 0
+
+    def __str__(self):
+        mix = namedtuple("Mixup", ["probability", "alpha", "iters"])
+        return str(mix(self.conf_prob, self.distrib, self.steps))
 
     def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
+        if self.curr_step < self.steps:
+            xb = self.call(xb=xb, yb=yb, model=model)
+        else:
+            self.yb1 = yb
+            self.is_active = False
+
+        self.curr_step += 1
+        return xb
+
+    def call(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
         r = np.random.rand(1)
-        self.yb1 = yb
 
         if r < self.conf_prob:
             self.is_active = True
@@ -67,40 +87,48 @@ class Mixup:
             index = torch.randperm(bs, device=self.device)
             xb = self.lam * xb + (1 - self.lam) * xb[index, :]
             self.yb1, self.yb2 = yb, yb[index]
+
         else:
+            self.yb1 = yb
             self.is_active = False
         return xb
-
-    def __str__(self):
-        mix = namedtuple("Mixup", ["probability", "alpha"])
-        return str(mix(self.conf_prob, self.distrib))
 
     def loss(self, lf, pred, reduction="mean"):
         self.old_lf = lf
         if self.is_active:
             with NoneReduce(self.old_lf) as lf:
                 loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
-                loss = (
-                    loss.mean()
-                    if reduction == "mean"
-                    else loss.sum()
-                    if reduction == "sum"
-                    else loss
-                )
+
+            loss = loss.mean() if reduction == "mean" else loss.sum() if reduction == "sum" else loss
+
         if not self.is_active:
             loss = self.old_lf(pred, self.yb1)
+
         return loss
 
 # Cell
 # modified from : https://github.com/clovaai/CutMix-PyTorch/blob/master/train.py
 class Cutmix:
-    "Implementation of `https://arxiv.org/abs/1905.04899`"
+    """Implementation of `https://arxiv.org/abs/1905.04899`
 
-    def __init__(self, alpha: float = 1.0, conf_prob=1.0):
-        self.device = None
+    Args:
+        alpha (float): cutmix alpha value.
+        conf_prob (float): probability of applying cutmix per batch or elements
+        steps (int): number of batches or elements to apply cutmix
+    """
+
+    def __init__(self, alpha: float = 0.4, conf_prob: float = 1.0, steps: int = None):
         self.distrib = alpha
-        self.is_active = False
         self.conf_prob = conf_prob
+
+        if steps is None:
+            self.steps = 100000000
+        else:
+            self.steps = steps
+
+        self.device = None
+        self.is_active = False
+        self.curr_step = 0
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1.0 - lam)
@@ -122,8 +150,17 @@ class Cutmix:
         )
 
     def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
+        if self.curr_step < self.steps:
+            xb = self.call(xb=xb, yb=yb, model=model)
+        else:
+            self.yb1 = yb
+            self.is_active = False
+
+        self.curr_step += 1
+        return xb
+
+    def call(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
         r = np.random.rand(1)
-        self.yb1 = yb
 
         if r < self.conf_prob:
             self.is_active = True
@@ -141,41 +178,56 @@ class Cutmix:
             self.yb1, self.yb2 = yb, yb[index]
             x1, y1, x2, y2 = self.rand_bbox(W, H, self.lam)
             xb[:, :, x1:x2, y1:y2] = xb[index, :, x1:x2, y1:y2]
-            # adjust lambda to exactly match pixel ratio
+
             self.lam = (1 - ((x2 - x1) * (y2 - y1)) / float(W * H)).item()
+
         else:
+            self.yb1 = yb
             self.is_active = False
+
         return xb
 
     def __str__(self):
-        mix = namedtuple("Cutmix", ["probability", "alpha"])
-        return str(mix(self.conf_prob, self.distrib))
+        mix = namedtuple("Cutmix", ["probability", "alpha", "iters"])
+        return str(mix(self.conf_prob, self.distrib, self.steps))
 
     def loss(self, lf, pred, reduction="mean"):
         self.old_lf = lf
+
         if self.is_active:
             with NoneReduce(self.old_lf) as lf:
                 loss = torch.lerp(lf(pred, self.yb2), lf(pred, self.yb1), self.lam)
-                loss = (
-                    loss.mean()
-                    if reduction == "mean"
-                    else loss.sum()
-                    if reduction == "sum"
-                    else loss
-                )
+            loss = loss.mean() if reduction == "mean" else loss.sum() if reduction == "sum" else loss
+
         if not self.is_active:
             loss = self.old_lf(pred, self.yb1)
+
         return loss
 
 # Cell
 # @TODO: add midlevel classification branch in learning.
 class SnapMix:
-    "Implementation of https://arxiv.org/abs/2012.04846"
+    """Implementation of https://arxiv.org/abs/2012.04846
 
-    def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0):
+    Args:
+        alpha (float): snapmix alpha value.
+        conf_prob (float): probability of applying snapmix per batch or elements
+        steps (int): number of batches or elements to apply snapmix
+
+    """
+
+    def __init__(self, alpha: float = 5.0, conf_prob: float = 1.0, steps: int = None):
+        self.distrib = alpha
+        self.conf_prob = conf_prob
+
+        if steps is None:
+            self.steps = 100000000
+        else:
+            self.steps = steps
+
         self.device = None
-        self.distrib, self.conf_prob = alpha, conf_prob
         self.is_active = False
+        self.curr_step = 0
 
     def rand_bbox(self, W, H, lam):
         cut_rat = torch.sqrt(1.0 - lam)
@@ -199,10 +251,7 @@ class SnapMix:
         )
 
     def get_spm(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-        model: SnapMixTransferLearningModel,
+        self, input: torch.Tensor, target: torch.Tensor, model: Module,
     ):
 
         bs, _, H, W = input.size()
@@ -254,12 +303,18 @@ class SnapMix:
 
         return outmaps, clslogit
 
-    def __call__(
-        self, xb: torch.Tensor, yb: torch.Tensor, model: SnapMixTransferLearningModel
-    ):
+    def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
+        if self.curr_step < self.steps:
+            xb = self.call(xb=xb, yb=yb, model=model)
+        else:
+            self.yb1 = yb
+            self.is_active = False
+
+        self.curr_step += 1
+        return xb
+
+    def call(self, xb: torch.Tensor, yb: torch.Tensor, model: Module):
         r = np.random.rand(1)
-        self.xb = xb
-        self.yb1 = yb
 
         if r < self.conf_prob:
             self.is_active = True
@@ -330,61 +385,106 @@ class SnapMix:
 
             self.yb1, self.yb2 = self.yb, self.yb1
             self.lam_a, self.lam_b = lam_a.to(self.device), lam_b.to(self.device)
-            self.model, self.xb = model, xb
+
         else:
+            self.yb1 = yb
             self.is_active = False
-        return self.xb
+
+        return xb
 
     def __str__(self):
-        mix = namedtuple("SnapMix", ["probability", "alpha"])
-        return str(mix(self.conf_prob, self.distrib))
+        mix = namedtuple("SnapMix", ["probability", "alpha", "iters"])
+        return str(mix(self.conf_prob, self.distrib, self.steps))
 
     def loss(self, lf, pred, *args, **kwargs):
         if self.is_active:
             loss_a = lf(pred, self.yb1)
             loss_b = lf(pred, self.yb2)
             loss = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+
         if not self.is_active:
             loss = lf(pred, self.yb1)
+
         return loss
 
 # Cell
 class MixupAndCutmix:
+    """ Applies Mixup or Cumtix to a batch or elements.
+
+     Args:
+         cutmix_alpha (float): cutmix alpha value, cutmix is active if > 0.
+         mixup_alpha (float): mixup alpha value, mixup is active if > 0.
+         switch_prob (float): probability of switching to cutmix instead of mixup when both are active.
+         conf_prob (float): probability of applying mixup or cutmix per batch or element.
+         steps (int): number of batches or elements to apply snapmix.
+     """
+
     def __init__(
         self,
         cutmix_alpha: float = 1.0,
         mixup_alpha: float = 0.4,
         switch_prob: float = 0.5,
         conf_prob: float = 0.5,
+        steps: int = None,
     ):
 
         self.cutmix = Cutmix(cutmix_alpha, conf_prob=1.0)
         self.mixup = Mixup(mixup_alpha, conf_prob=1.0)
+
         self.switch_prob, self.conf_prob = switch_prob, conf_prob
         self.cx_alpha, self.mx_aplha = cutmix_alpha, mixup_alpha
+
         self.is_active = False
         self.curr_method = None
 
+        if steps is None:
+            self.steps = 100000000
+        else:
+            self.steps = steps
+
+        self.curr_step = 0
+
     def __str__(self):
-        mix = namedtuple("Mixup_Cutmix", ["probability", "alphas", "switch_prob"])
+        mix = namedtuple(
+            "MixupCutmix", ["probability", "alphas", "switch_prob", "iters"]
+        )
         return str(
-            mix(self.conf_prob, [self.mx_aplha, self.cx_alpha], self.switch_prob)
+            mix(
+                self.conf_prob,
+                [self.mx_aplha, self.cx_alpha],
+                self.switch_prob,
+                self.steps,
+            )
         )
 
     def __call__(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
+        if self.curr_step < self.steps:
+            xb = self.call(xb=xb, yb=yb, model=model)
+        else:
+            self.yb1 = yb
+            self.is_active = False
+
+        self.curr_step += 1
+        return xb
+
+    def call(self, xb: torch.Tensor, yb: torch.Tensor, model: Module = None):
         r = np.random.rand(1)
-        self.yb1 = yb
 
         if r < self.conf_prob:
             q = np.random.rand(1)
+
             if q < self.switch_prob:
                 self.curr_method = self.cutmix
             else:
                 self.curr_method = self.mixup
+
             self.is_active = True
+
             xb = self.curr_method(xb, yb, model)
+            self.yb1 = self.curr_method.yb1
 
         else:
+            self.yb1 = yb
             self.is_active = False
 
         return xb
@@ -392,6 +492,8 @@ class MixupAndCutmix:
     def loss(self, lf, pred, *args, **kwargs):
         if not self.is_active:
             loss = lf(pred, self.yb1)
+
         if self.is_active:
             loss = self.curr_method.loss(lf, pred, *args, **kwargs)
+
         return loss

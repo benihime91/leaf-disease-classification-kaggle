@@ -84,7 +84,6 @@ def main(cfg: DictConfig):
         DisableProgressBar(),
         ConsoleLogger(print_every=100),
         LearningRateMonitor(cfg.scheduler.scheduler_interval),
-        EarlyStopping(monitor="valid/acc", mode="max"),
     ]
 
     chkpt_cb = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)

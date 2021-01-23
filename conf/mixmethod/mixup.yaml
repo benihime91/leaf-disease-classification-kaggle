@@ -1,4 +1,5 @@
 # @package mixmethod
 _target_: src.mixmethods.Mixup
-alpha: 5.0
+alpha: 0.4
 conf_prob: 1.0
+steps: null

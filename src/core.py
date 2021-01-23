@@ -79,9 +79,9 @@ class DummyDataset(torch.utils.data.Dataset):
         self.data = data
 
         self.transforms = A.Compose([A.RandomResizedCrop(224, 224, p=1.0),
-                                     A.RandomBrightness(),
+                                     A.RandomBrightness(limit=0.1),
+                                     A.VerticalFlip(),
                                      A.HorizontalFlip(),
-                                     A.IAASharpen(),
                                      A.Normalize(p=1.0),
                                      ToTensorV2(p=1.0)])
 
