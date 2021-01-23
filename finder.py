@@ -21,22 +21,22 @@ def main(cfg: DictConfig):
     val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
 
     # instantiate the base model architecture + activation function
-    net = instantiate(cfg.network.model)
-    act_func = instantiate(cfg.activation)
+    if cfg.network.activation is not None:
+        act_func = activation_map[cfg.network.activation]
+    else:
+        act_func = None
+
+    # with timm models pass in act_layer args to modify the activations layers
+    try:
+        net = instantiate(cfg.network.model, act_layer=act_func)
+    except:
+        # @TODO: find a way to replace activations with mdoels from pretrainedmdeols lib
+        net = instantiate(cfg.network.model)
 
     # build the transfer learning network
-    net = instantiate(cfg.network.transfer_learning_model, encoder=net, act=act_func,)
-
-    # modify activations if activation is other than ReLU
-    if cfg.activation._target_ != "torch.nn.ReLU":
-        replace_activs(net.encoder, func=act_func)
-
-    # init the weights of the final untrained layer
-    try:
-        apply_init(net.fc, torch.nn.init.kaiming_normal_)
-    except:
-        # for vision transformer
-        apply_init(net.model.head, torch.nn.init.kaiming_normal_)
+    net = instantiate(
+        cfg.network.transfer_learning_model, encoder=net, act=act_func(inplace=True),
+    )
 
     # init the LightingDataModule + LightningModule
     if isinstance(net, VisionTransformer):
