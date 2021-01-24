@@ -1,6 +1,6 @@
 defaults:
   - hydra/job_logging: custom
-  - hydra/hydra_logging: colorlog
+  - hydra/hydra_logging: custom
   - augmentations: light-augs
   - datamodule: default
   - network: seresnext101-snapmix
