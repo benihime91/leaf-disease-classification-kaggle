@@ -56,10 +56,15 @@ def main(cfg: DictConfig):
         val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
         _logger.info("Loaded albumentations transformations.")
     else:
-        trn_augs, val_augs = None
+        trn_augs, val_augs = None, None
 
     # set up data-module for training
-    loaders = instantiate(cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs, default_config=cfg)
+    loaders = instantiate(
+        config=cfg.datamodule,
+        train_augs=trn_augs,
+        valid_augs=val_augs,
+        default_config=cfg,
+    )
 
     # instantiate the base model architecture + activation function
     if cfg.network.activation is not None:
@@ -77,7 +82,11 @@ def main(cfg: DictConfig):
         net = instantiate(cfg.network.model)
 
     # build the transfer learning network
-    net = instantiate(cfg.network.transfer_learning_model, encoder=net, act=act_func(inplace=True),)
+    net = instantiate(
+        config=cfg.network.transfer_learning_model,
+        encoder=net,
+        act=act_func(inplace=True),
+    )
 
     # init the LightningModule
     if isinstance(net, VisionTransformer):

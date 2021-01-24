@@ -10,18 +10,20 @@ from pytorch_lightning import Trainer
 
 from src.all import *
 
+_logger = logging.getLogger(__file__)
+_logger.setLevel(logging.INFO)
+
 
 def main(cfg: DictConfig):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
     _ = seed_everything(cfg.general.random_seed)
 
     # instantiate the base model architecture + activation function
     if cfg.network.activation is not None:
         act_func = activation_map[cfg.network.activation]
+        _logger.info(f"{act_func(inplace=True)} loaded .")
     else:
         act_func = None
+        _logger.info(f"Default activation function(s) loaded .")
 
     # with timm models pass in act_layer args to modify the activations layers
     try:
@@ -32,7 +34,9 @@ def main(cfg: DictConfig):
 
     # build the transfer learning network
     net = instantiate(
-        cfg.network.transfer_learning_model, encoder=net, act=act_func(inplace=True),
+        config=cfg.network.transfer_learning_model,
+        encoder=net,
+        act=act_func(inplace=True),
     )
 
     # init the LightingDataModule + LightningModule
@@ -45,10 +49,10 @@ def main(cfg: DictConfig):
     if cfg.augmentations.backend == "albumentations":
         train_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
         valid_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
+        _logger.info("Loaded albumentations transformations.")
     else:
-        train_augs, valid_augs = None
+        train_augs, valid_augs = None, None
 
-    # set up data-module for training
     loaders = instantiate(
         config=cfg.datamodule,
         train_augs=train_augs,
@@ -71,9 +75,9 @@ def main(cfg: DictConfig):
     _path = os.path.join(cfg.general.save_dir, f"lr-finder-plot.png")
     fig.savefig(_path)
 
-    logger.info("Compiling Lr-Finder results ...")
-    logger.info(f"Suggested LR's : {lr_finder.suggestion():.7f}")
-    logger.info(f"Results saved to {_path}")
+    _logger.info("Compiling Lr-Finder results ...")
+    _logger.info(f"Suggested LR's : {lr_finder.suggestion():.7f}")
+    _logger.info(f"Results saved to {_path}")
 
 
 @hydra.main(config_path="conf", config_name="02-01-20-seresnext50_32x4d")
