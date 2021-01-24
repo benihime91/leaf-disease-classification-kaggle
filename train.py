@@ -33,7 +33,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from src.all import *
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger("train")
 _logger.setLevel(logging.INFO)
 
 

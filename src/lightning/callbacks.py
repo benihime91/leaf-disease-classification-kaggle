@@ -156,7 +156,7 @@ class PrintLogsCallback(pl.Callback):
     TrainResult = namedtuple("TrainOutput", ["loss", "acc", "val_loss", "val_acc"])
     TestResult = namedtuple("TestOutput", ["test_loss", "test_acc"])
 
-    logger = logging.getLogger("Trainer")
+    logger = logging.getLogger("train")
 
     def on_epoch_end(self, trainer, pl_module):
         metrics = trainer.callback_metrics
@@ -238,7 +238,7 @@ class ConsoleLogger(pl.Callback):
     tst_res = namedtuple("TestOutput", ["test_loss", "test_acc"])
     curr_step = 0
     has_init = False
-    logger = logging.getLogger("Trainer")
+    logger = logging.getLogger("train")
 
     def __init__(self, print_every: int = 50):
         self.print_every = print_every

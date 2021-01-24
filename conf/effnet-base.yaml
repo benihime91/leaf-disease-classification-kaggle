@@ -1,5 +1,5 @@
 defaults:
-  - hydra/job_logging: colorlog
+  - hydra/job_logging: custom
   - hydra/hydra_logging: colorlog
   - augmentations: rotation-augs
   - datamodule: default
