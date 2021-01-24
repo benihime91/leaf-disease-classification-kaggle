@@ -57,7 +57,9 @@ class TransferLearningModel(nn.Module):
 class SnapMixTransferLearningModel(nn.Module):
     "Transfer Learning with model to be comaptible with Snapmix"
 
-    def __init__(self, encoder: nn.Module, c: int, cut: int = -2, **kwargs):
+    def __init__(
+        self, encoder: nn.Module, c: int, cut: int = -2, drop_rate=0.0, **kwargs
+    ):
         """
         Args:
             encoder (nn.Module): the classifer to extract features
@@ -82,14 +84,21 @@ class SnapMixTransferLearningModel(nn.Module):
         self.encoder = cut_model(encoder, cut)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.flat_layer = nn.Flatten()
-        self.fc = nn.Linear(feats, self.c)
 
+        if drop_rate > 0:
+            self.dropout_layer = nn.Dropout(drop_rate)
+        else:
+            self.dropout_layer = None
+
+        self.fc = nn.Linear(feats, self.c)
         apply_init(self.fc, torch.nn.init.kaiming_normal_)
 
     def forward(self, xb):
         fmps = self.encoder(xb)
         x = self.pool(fmps)
         x = self.flat_layer(x)
+        if self.dropout_layer is not None:
+            x = self.dropout_layer(x)
         return self.fc(x)
 
 # Cell

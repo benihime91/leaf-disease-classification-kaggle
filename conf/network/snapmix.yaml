@@ -9,5 +9,6 @@ transfer_learning_model:
   _target_: src.networks.SnapMixTransferLearningModel
   cut: -2
   c: 5
+  drop_rate: 0.0
 
 activation: null
