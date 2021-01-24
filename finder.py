@@ -15,10 +15,7 @@ def main(cfg: DictConfig):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    seed = seed_everything(cfg.general.random_seed)
-
-    trn_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
-    val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
+    _ = seed_everything(cfg.general.random_seed)
 
     # instantiate the base model architecture + activation function
     if cfg.network.activation is not None:
@@ -44,7 +41,20 @@ def main(cfg: DictConfig):
     else:
         model = LightningCassava(net, conf=cfg)
 
-    loaders = instantiate(cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs,)
+    # set up training data pipeline
+    if cfg.augmentations.backend == "albumentations":
+        train_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
+        valid_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
+    else:
+        train_augs, valid_augs = None
+
+    # set up data-module for training
+    loaders = instantiate(
+        config=cfg.datamodule,
+        train_augs=train_augs,
+        valid_augs=valid_augs,
+        default_config=cfg,
+    )
 
     # initialize pytorch_lightning
     trainer: Trainer = instantiate(cfg.trainer)

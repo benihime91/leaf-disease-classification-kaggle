@@ -46,8 +46,17 @@ def main(cfg: DictConfig):
     uq_id = cfg.general.unique_idx
     model_name = f"{cfg.encoder}-fold={cfg.datamodule.curr_fold}-{uq_id}"
 
-    trn_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
-    val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
+    # set up training data pipeline
+    if cfg.augmentations.backend == "albumentations":
+        trn_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
+        val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
+    else:
+        trn_augs, val_augs = None
+
+    # set up data-module for training
+    loaders = instantiate(
+        cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs, default_config=cfg
+    )
 
     # instantiate the base model architecture + activation function
     if cfg.network.activation is not None:
@@ -67,13 +76,11 @@ def main(cfg: DictConfig):
         cfg.network.transfer_learning_model, encoder=net, act=act_func(inplace=True),
     )
 
-    # init the LightingDataModule + LightningModule
+    # init the LightningModule
     if isinstance(net, VisionTransformer):
         model = LightningVisionTransformer(net, conf=cfg)
     else:
         model = LightningCassava(net, conf=cfg)
-    # set up data-module for training
-    loaders = instantiate(cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs,)
 
     # initialize pytorch_lightning Trainer + Callbacks
     cbs = [
