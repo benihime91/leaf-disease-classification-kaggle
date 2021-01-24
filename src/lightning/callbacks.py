@@ -453,6 +453,7 @@ class ConsoleLogger(pl.Callback):
 
         # increment iterations
         self.current_iteration += 1
+        self.curr_step += 1
 
     def on_epoch_end(self, trainer, pl_module, *args, **kwargs):
         metrics = trainer.callback_metrics
