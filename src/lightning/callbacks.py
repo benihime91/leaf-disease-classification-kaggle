@@ -251,9 +251,7 @@ class ConsoleLogger(pl.Callback):
         if not self.has_init:
             cfg = pl_module.hparams
 
-            model_class = str(cfg.network.transfer_learning_model._target_).split(".")[
-                -1
-            ]
+            model_class = str(cfg.network.transfer_learning_model._target_).split(".")[-1]
             summary = ModelSummary(pl_module)
             param_count = get_human_readable_count(summary.param_nums[0])
             # log information about the model
@@ -297,12 +295,11 @@ class ConsoleLogger(pl.Callback):
             self.log_msg(f"[Parameters] mix_method: {pl_module.mix_fn}")
             self.log_line()
 
-            has_init = True
+            self.has_init = True
 
+        # start the training job
         self.log_msg(f"Start TRAIN / VALIDATION from epoch {trainer.current_epoch}")
-        self.log_msg(
-            f"Model training base path: {os.path.relpath(trainer.checkpoint_callback.dirpath)}"
-        )
+        self.log_msg(f"Model training base path: {os.path.relpath(trainer.checkpoint_callback.dirpath)}")
         self.log_msg(f"Device: {pl_module.device}")
         self.log_line()
 
@@ -312,15 +309,12 @@ class ConsoleLogger(pl.Callback):
         self.seen_batches = 0
         self._stp_loss = 0
         self._stp_acc = 0
+        self.running_time = datetime.datetime.now()
 
     def on_train_batch_start(self, *args, **kwargs):
         self.start_time = datetime.datetime.now()
 
     def on_train_batch_end(self, trainer, pl_module, *args, **kwargs):
-        ep = trainer.current_epoch
-        tots = len(pl_module.train_dataloader())
-        batch_time = str(datetime.datetime.now() - self.start_time).split(".")[0]
-
         msg = "eta: {} iteration: {} loss: {:.3f} accuracy: {:.3f} lrs: {}"
 
         mini_batch_size = pl_module.hparams.datamodule.bs
@@ -333,14 +327,21 @@ class ConsoleLogger(pl.Callback):
         self._stp_acc += _stp_metrics["train/acc_step"]
 
         if self.curr_step % self.print_every == 0:
-            seen_samples = mini_batch_size * self.seen_batches
+            # compute average loss/accuracy
             avg_loss = self._stp_loss / self.seen_batches
             avg_acc = self._stp_acc / self.seen_batches
-
+            # compute time elasped since last log
+            batch_time = str(datetime.datetime.now() - self.running_time).split(".")[0]
+            # the learning-rates of the model parameters
             lrs = tuple(trainer.lr_schedulers[0]["scheduler"].get_lr())
             lrs = [float("{0:.2e}".format(v)) for v in lrs]
 
-            self.log_msg(msg.format(batch_time, self.current_iteration, avg_loss, avg_loss, lrs))
+            self.log_msg(msg.format(batch_time, self.current_iteration, avg_loss, avg_acc, lrs))
+
+
+        # time taken for completion of one-batch
+        time_delta = datetime.datetime.now() - self.start_time
+        self.running_time += time_delta
 
         # increment iterations
         self.curr_step += 1
