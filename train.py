@@ -146,6 +146,8 @@ if __name__ == "__main__":
     import warnings
 
     warnings.filterwarnings("ignore")
+    logging.getLogger("lightning").setLevel(logging.WARNING)
+    logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
 
     # run train
     cli_hydra()
