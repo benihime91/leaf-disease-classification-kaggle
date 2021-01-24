@@ -318,7 +318,7 @@ class IterationTimer:
         self._total_timer.reset()
         self._total_timer.pause()
 
-    def after_train(self, num_iter: int):
+    def after_train(self, num_iter: int, stage:str = "training"):
         logger = logging.getLogger("train")
         total_time = time.perf_counter() - self._start_time
         total_time_minus_hooks = self._total_timer.seconds()
@@ -326,7 +326,8 @@ class IterationTimer:
 
         if num_iter > 0 and total_time_minus_hooks > 0:
             logger.info(
-                "Overall training speed: {} iterations in {} ({:.4f} s / it)".format(
+                "Overall {} speed: {} iterations in {} ({:.4f} s / it)".format(
+                    stage,
                     num_iter,
                     str(datetime.timedelta(seconds=int(total_time_minus_hooks))),
                     total_time_minus_hooks / num_iter,
@@ -353,7 +354,7 @@ class ConsoleLogger(pl.Callback):
     trn_res = namedtuple("TrainOutput", ["loss", "acc", "val_loss", "val_acc"])
     tst_res = namedtuple("TestOutput", ["test_loss", "test_acc"])
     curr_step = 0
-    has_init = False
+
     logger = logging.getLogger("train")
 
     def __init__(self, print_every: int = 50):
@@ -364,68 +365,56 @@ class ConsoleLogger(pl.Callback):
     def on_train_start(self, trainer, pl_module, *args, **kwargs):
         self.start_time = time.perf_counter()
 
-        if not self.has_init:
-            cfg = pl_module.hparams
+        cfg = pl_module.hparams
 
-            model_class = str(cfg.network.transfer_learning_model._target_).split(".")[
-                -1
-            ]
-            summary = ModelSummary(pl_module)
-            param_count = get_human_readable_count(summary.param_nums[0])
-            # log information about the model
-            self.log_msg(f"[Model] model_class: {model_class}")
-            self.log_msg(f"[Model] base_model: {cfg.encoder}")
-            self.log_msg(f"[Model] total_parameters: {param_count}")
-            self.log_line()
+        model_class = str(cfg.network.transfer_learning_model._target_).split(".")[-1]
+        summary = ModelSummary(pl_module)
+        param_count = get_human_readable_count(summary.param_nums[0])
 
-            path = os.path.relpath(cfg.datamodule.im_dir)
-            oof_fold = str(cfg.datamodule.curr_fold)
-            trn_batches = len(pl_module.train_dataloader())
-            val_batches = len(pl_module.val_dataloader())
-            tst_batches = len(pl_module.test_dataloader())
-            # log information about the dataset
-            self.log_msg(f"[Dataset] path: {path}")
-            self.log_msg(f"[Dataset] validation_fold: {oof_fold}")
-            self.log_msg(
-                f"[Dataset] batches: {trn_batches} train + {val_batches} valid + {tst_batches} test"
-            )
-            self.log_line()
+        # log information about the model
+        _model = namedtuple("Model", ["base_classifier", "kind"])
+        self.log_msg(f"{_model(cfg.encoder, model_class)} created, param_count: {param_count}")
 
-            lr_scheduler = str(cfg.scheduler.function._target_).split(".")[-1]
-            optimizer = str(cfg.optimizer._target_).split(".")[-1]
-            # log information about the training parameters
-            self.log_msg(
-                f"[Parameters] input_dimensions: {(cfg.image_dims, cfg.image_dims, 3)}"
-            )
-            self.log_msg(f"[Parameters] max_epochs: {trainer.max_epochs}")
-            self.log_msg(f"[Parameters] mini_batch_size: {str(cfg.datamodule.bs)}")
-            self.log_msg(
-                f"[Parameters] accumulate_batches: {trainer.accumulate_grad_batches}"
-            )
-            self.log_msg(f"[Parameters] optimizer: {optimizer}")
-            self.log_msg(f"[Parameters] learning_rates: {str(pl_module.lr_list)}")
-            self.log_msg(
-                f"[Parameters] weight_decay: {str(cfg.optimizer.weight_decay)}"
-            )
-            self.log_msg(f"[Parameters] scheduler: {lr_scheduler}")
-            self.log_msg(f"[Parameters] gradient_clipping: {trainer.gradient_clip_val}")
-            self.log_msg(f"[Parameters] loss_function: {pl_module.loss_func}")
-            self.log_msg(f"[Parameters] mix_method: {pl_module.mix_fn}")
-            self.log_line()
+        path = os.path.relpath(cfg.datamodule.im_dir)
+        oof_fold = str(cfg.datamodule.curr_fold)
+        trn_batches = len(pl_module.train_dataloader())
+        val_batches = len(pl_module.val_dataloader())
+        tst_batches = len(pl_module.test_dataloader())
+        dl = pl_module.train_dataloader()
+        try:
+            _trn_tfms = list(dl.dataset.tfms.transforms)
+        except:
+            _trn_tfms = list(dl.dataset.transforms.transforms)
 
-            self.has_init = True
+        # log information about the dataset
+        self.log_msg(f"Loaded dataset from {path}, using {oof_fold} fold as the OOF validation dataset.")
+        self.log_msg(f"Loaded dataset has {trn_batches} train + {val_batches} valid + {tst_batches} test.")
+        self.log_msg(f"Transformations used in training: {_trn_tfms}.")
+        self.log_msg(f"Images are resized to {(cfg.image_dims, cfg.image_dims, 3)}.")
+        self.log_msg(f"Creating batches of size {str(cfg.datamodule.bs)} and concating the images.")
+
+        lr_scheduler = str(cfg.scheduler.function._target_).split(".")[-1]
+        optimizer = str(cfg.optimizer._target_).split(".")[-1]
+        # log information about the training parameters
+
+        self.log_msg(f"Scheduled epochs: {trainer.max_epochs}")
+        self.log_msg(f"Accumulate batches: {trainer.accumulate_grad_batches}")
+
+        self.log_msg(f"Training with {optimizer}, lrs={str(pl_module.lr_list)}, wd={str(cfg.optimizer.weight_decay)}")
+        self.log_msg(f"Scheduling learining_rate via {lr_scheduler} scheduler.")
+
+        self.log_msg(f"Loss Function used : {pl_module.loss_func}")
+
+        if pl_module.mix_fn is not None:
+            self.log_msg(f"Training with {pl_module.mix_fn}")
 
         # start the training job
         self.log_msg(f"Start TRAIN / VALIDATION from epoch {trainer.current_epoch}")
-        self.log_msg(
-            f"Model training base path: {os.path.relpath(trainer.checkpoint_callback.dirpath)}"
-        )
-        self.log_msg(f"Device: {pl_module.device}")
-        self.log_line()
 
         self.total_iters = trn_batches * trainer.max_epochs
         self.current_iteration = 0
         self.train_timer.before_train()
+        self.total_test_iters = tst_batches
 
     def on_train_epoch_start(self, *args, **kwargs):
         self.step_loss = 0
@@ -455,16 +444,12 @@ class ConsoleLogger(pl.Callback):
 
             # the learning-rates of the model parameters
             lrs = tuple(trainer.lr_schedulers[0]["scheduler"].get_lr())
-            lrs = [float("{0:.2e}".format(v)) for v in lrs]
+            lrs = tuple([float("{0:.1e}".format(v)) for v in lrs])
 
             # get eta from timer
-            eta = self.train_timer.get_eta(
-                max_iter=self.total_iters, iteration=self.current_iteration
-            )
+            eta = self.train_timer.get_eta(max_iter=self.total_iters, iteration=self.current_iteration)
 
-            self.log_msg(
-                msg.format(eta, self.current_iteration, avg_loss, avg_acc, lrs)
-            )
+            self.log_msg(msg.format(eta, self.current_iteration, avg_loss, avg_acc, lrs))
 
         # increment iterations
         self.current_iteration += 1
@@ -486,30 +471,37 @@ class ConsoleLogger(pl.Callback):
         )
 
         curr_epoch = int(trainer.current_epoch)
-        self.log_line()
-        self.log_msg(f"EPOCH {curr_epoch}: {_res}")
-        self.log_line()
+        self.log_msg(f"EPOCH {curr_epoch}: (100 % done) {_res}")
 
     def on_train_end(self, *args, **kwargs):
         time_elasped = time.perf_counter() - self.start_time
-        self.log_msg(
-            f"Total training time: {str(datetime.timedelta(seconds=int(time_elasped)))}"
-        )
+        self.log_msg(f"Total training time: {str(datetime.timedelta(seconds=int(time_elasped)))}")
         self.train_timer.after_train(num_iter=self.current_iteration)
-        self.log_line()
 
     def on_test_start(self, trainer, pl_module, *args, **kwargs):
         self.test_iters = 0
         self.test_start = time.perf_counter()
         self.test_timer.before_train()
-        self.has_init = False
 
         path = os.path.relpath(trainer.checkpoint_callback.dirpath)
-        self.log_msg("Start TEST")
-        self.log_msg(f"Model testing base path: {path}")
-        self.log_msg(f"Device: {pl_module.device}")
+        self.log_msg(f"Start TEST on {self.total_test_iters} batches")
+
+        dl = pl_module.val_dataloader()
+        try:
+            _val_tfms = list(dl.dataset.tfms.transforms)
+        except:
+            _val_tfms = list(dl.dataset.transforms.transforms)
+        self.log_msg(f"Transformations used: {_val_tfms}")
+
+    def on_test_batch_start(self, trainer, pl_module, *args, **kwargs):
+        self.test_timer.before_step()
 
     def on_test_batch_end(self, trainer, pl_module, *args, **kwargs):
+        self.test_timer.after_step()
+
+        if self.test_iters % self.print_every == 0:
+            eta = self.test_timer.get_eta(max_iter=self.total_test_iters, iteration=self.test_iters)
+            self.log_msg(f"Testing done {self.test_iters}/{self.total_test_iters}. ETA={eta}")
         self.test_iters += 1
 
     def on_test_epoch_end(self, trainer, pl_module, *args, **kwargs):
@@ -519,14 +511,12 @@ class ConsoleLogger(pl.Callback):
 
         loss = round(test_loss.data.cpu().numpy().item(), 2)
         accuracy = round(test_acc.data.cpu().numpy().item(), 2)
-        self.log_msg(f"{self.tst_res(loss, accuracy)}")
+        self.log_msg(f"Test results: (100 % done) {self.tst_res(loss, accuracy)}")
 
     def on_test_end(self, *args, **kwargs):
         time_elasped = time.perf_counter() - self.test_start
-        self.log_msg(
-            f"Total testing time: {str(datetime.timedelta(seconds=int(time_elasped)))}"
-        )
-        self.test_timer.after_train(num_iter=self.test_iters)
+        self.log_msg(f"Total testing time: {str(datetime.timedelta(seconds=int(time_elasped)))}")
+        self.test_timer.after_train(num_iter=self.test_iters, stage="testing")
 
     def log_msg(self, msg: str):
         self.logger.info(msg)
