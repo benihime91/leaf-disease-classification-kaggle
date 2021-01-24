@@ -20,6 +20,7 @@ Note: To use the lr_finder algorithm to get a good starting learning rate, run t
 See (https://pytorch-lightning.readthedocs.io/en/latest/lr_finder.html)
 """
 import os
+import logging
 
 import albumentations as A
 import hydra
@@ -31,6 +32,9 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from src.all import *
+
+_logger = logging.getLogger(__file__)
+_logger.setLevel(logging.INFO)
 
 
 def main(cfg: DictConfig):
@@ -50,19 +54,20 @@ def main(cfg: DictConfig):
     if cfg.augmentations.backend == "albumentations":
         trn_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
         val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
+        _logger.info("Loaded albumentations transformations.")
     else:
         trn_augs, val_augs = None
 
     # set up data-module for training
-    loaders = instantiate(
-        cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs, default_config=cfg
-    )
+    loaders = instantiate(cfg.datamodule, train_augs=trn_augs, valid_augs=val_augs, default_config=cfg)
 
     # instantiate the base model architecture + activation function
     if cfg.network.activation is not None:
         act_func = activation_map[cfg.network.activation]
+        _logger.info(f"{act_func(inplace=True)} loaded .")
     else:
         act_func = None
+        _logger.info(f"Default activation function(s) loaded .")
 
     # with timm models pass in act_layer args to modify the activations layers
     try:
@@ -72,9 +77,7 @@ def main(cfg: DictConfig):
         net = instantiate(cfg.network.model)
 
     # build the transfer learning network
-    net = instantiate(
-        cfg.network.transfer_learning_model, encoder=net, act=act_func(inplace=True),
-    )
+    net = instantiate(cfg.network.transfer_learning_model, encoder=net, act=act_func(inplace=True),)
 
     # init the LightningModule
     if isinstance(net, VisionTransformer):

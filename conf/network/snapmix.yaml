@@ -3,6 +3,7 @@ model:
   _target_: timm.create_model
   model_name: ${encoder}
   pretrained: True
+  drop_rate: 0.25
 
 transfer_learning_model:
   _target_: src.networks.SnapMixTransferLearningModel
