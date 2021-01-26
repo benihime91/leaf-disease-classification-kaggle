@@ -5,33 +5,26 @@ __all__ = ['CASSAVA_MEAN', 'CASSAVA_STD', 'idx2lbl', 'conf_mat_idx2lbl', 'seed_e
            'get_valid_transformations', 'FancyImageDataset', 'params', 'trainable_params']
 
 # Cell
-from typing import Any
-import pandas as pd
-import uuid
 import math
-import numpy as np
-import random
 import os
-
-import cv2
-from PIL import Image
+import random
+import uuid
+from typing import Any
 
 import albumentations as A
-
+import cv2
+import numpy as np
+import pandas as pd
 import torch
 import torchvision
+from omegaconf import DictConfig, OmegaConf
+from PIL import Image
+from timm.data.auto_augment import *
+from timm.data.constants import DEFAULT_CROP_PCT, IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from timm.data.random_erasing import RandomErasing
+from timm.data.transforms import RandomResizedCropAndInterpolation, _pil_interp
 from torchvision import transforms
 from torchvision.datasets.folder import pil_loader
-from timm.data.transforms import _pil_interp, RandomResizedCropAndInterpolation
-from timm.data.random_erasing import RandomErasing
-from timm.data.constants import (
-    IMAGENET_DEFAULT_MEAN,
-    IMAGENET_DEFAULT_STD,
-    DEFAULT_CROP_PCT,
-)
-
-from omegaconf import DictConfig, OmegaConf
-
 
 # export
 CASSAVA_MEAN = (0.42984136, 0.49624753, 0.3129598)
@@ -158,7 +151,14 @@ def ifnone(a: Any, b: Any) -> Any:
 # Cell
 def get_train_transformations(cfg: DictConfig):
     scale = tuple(cfg.scale or (0.08, 1.0))  # default imagenet scale range
-    ratio = tuple(cfg.ratio or (3.0 / 4.0, 4.0 / 3.0))  # default imagenet ratio range
+    # default imagenet ratio range
+    ratio = tuple(cfg.ratio or (3.0 / 4.0, 4.0 / 3.0))
+
+    if cfg.mean == "cassava" and cfg.std == "cassava":
+        mean, std = CASSAVA_MEAN, CASSAVA_STD
+    else:
+        mean = ifnone(cfg.mean, IMAGENET_DEFAULT_MEAN)
+        std = ifnone(cfg.std, IMAGENET_DEFAULT_STD)
 
     primary_tfml = [
         RandomResizedCropAndInterpolation(
@@ -173,32 +173,38 @@ def get_train_transformations(cfg: DictConfig):
 
     secondary_tfml = []
 
-    if cfg.color_jitter is not None:
+    if cfg.rand_augment:
+        assert isinstance(cfg.rand_augment, str)
+        if isinstance(cfg.img_size, tuple):
+            img_size_min = min(cfg.img_size)
+        else:
+            img_size_min = cfg.img_size
+
+        aa_params = dict(
+            translate_const=int(img_size_min * 0.45),
+            img_mean=tuple([min(255, round(255 * x)) for x in mean]))
+
+        if cfg.interpolation and cfg.interpolation != 'random':
+            aa_params['interpolation'] = _pil_interp(interpolation)
+
+        secondary_tfml += [rand_augment_transform(cfg.rand_augment, aa_params)]
+
+    elif cfg.color_jitter is not None:
+        # color jitter is enabled when not using AA
         color_jitter = (float(cfg.color_jitter),) * 3
         secondary_tfml += [transforms.ColorJitter(*color_jitter)]
 
     final_tfml = []
-
-    if cfg.mean == "cassava" and cfg.std == "cassava":
-        mean, std = CASSAVA_MEAN, CASSAVA_STD
-    else:
-        mean = ifnone(cfg.mean, IMAGENET_DEFAULT_MEAN)
-        std = ifnone(cfg.std, IMAGENET_DEFAULT_STD)
 
     mean, std = torch.tensor(mean), torch.tensor(std)
 
     final_tfml += [transforms.ToTensor(), transforms.Normalize(mean, std)]
 
     if cfg.re_prob > 0.0:
-        final_tfml.append(
-            RandomErasing(
-                cfg.re_prob,
-                mode=cfg.re_mode,
-                max_count=cfg.re_count,
-                num_splits=cfg.re_num_splits,
-                device="cpu",
-            )
-        )
+        final_tfml.append(RandomErasing(cfg.re_prob, mode=cfg.re_mode,
+                                        max_count=cfg.re_count,
+                                        num_splits=cfg.re_num_splits,
+                                        device="cpu",))
 
     return transforms.Compose(primary_tfml + secondary_tfml + final_tfml)
 
@@ -257,15 +263,22 @@ class FancyImageDataset(torch.utils.data.Dataset):
         self.curr_step: int = 0
 
         if transforms is None:
-            initial_cfg = cfg.augmentations.train.params.re_prob
+            re_prob = cfg.augmentations.train.params.re_prob
+            rand_augment = cfg.augmentations.train.params.rand_augment
 
             cfg.augmentations.train.params.re_prob = 0.0
-            self.initial_tfms = get_train_transformations(
-                cfg.augmentations.train.params
-            )
+            cfg.augmentations.train.params.rand_augment = False
+            self.initial_tfms = get_train_transformations(cfg.augmentations.train.params)
 
-            cfg.augmentations.train.params.re_prob = initial_cfg
+            cfg.augmentations.train.params.re_prob = re_prob
+            cfg.augmentations.train.params.rand_augment = rand_augment
+            cfg.augmentations.train.params.color_jitter = None
+
+            if cfg.augmentations.train.params.rand_augment:
+                cfg.augmentations.train.params.re_prob = 0.0
+
             self.tfms = get_train_transformations(cfg.augmentations.train.params)
+
         else:
             self.initial_tfms = None
             self.tfms = transforms

@@ -1,0 +1,5 @@
+# @package loss
+_target_: src.losses.TaylorCrossEntropyLoss
+eps: 0.1
+n: 2
+reduction: mean
