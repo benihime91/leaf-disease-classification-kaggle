@@ -41,9 +41,7 @@ class CassavaLightningDataModule(LightningDataModule):
         self.config = default_config
 
         if self.config.augmentations.backend == "custom":
-            self.valid_augs = get_valid_transformations(
-                self.config.augmentations.valid.params
-            )
+            self.valid_augs = get_valid_transformations(self.config.augmentations.valid)
         else:
             self.valid_augs = valid_augs
 
@@ -58,49 +56,26 @@ class CassavaLightningDataModule(LightningDataModule):
         if stage == "fit" or stage is None:
             if self.config.augmentations.backend == "custom":
                 self.train_ds = FancyImageDataset(self.train_df, cfg=self.config)
-                self.valid_ds = FancyImageDataset(
-                    self.valid_df, cfg=self.config, transforms=self.valid_augs
-                )
+                self.valid_ds = FancyImageDataset(self.valid_df, cfg=self.config, transforms=self.valid_augs)
 
             elif self.config.augmentations.backend == "albumentations":
-                self.train_ds = ImageClassificationFromDf(
-                    self.train_df, self.train_augs
-                )
-                self.valid_ds = ImageClassificationFromDf(
-                    self.valid_df, self.valid_augs
-                )
+                self.train_ds = ImageClassificationFromDf(self.train_df, self.train_augs)
+                self.valid_ds = ImageClassificationFromDf(self.valid_df, self.valid_augs)
 
         if stage == "test" or stage is None:
             if self.config.augmentations.backend == "custom":
-                self.test_ds = FancyImageDataset(
-                    self.valid_df, cfg=self.config, transforms=self.valid_augs
-                )
+                self.test_ds = FancyImageDataset(self.valid_df, cfg=self.config, transforms=self.valid_augs)
+
             elif self.config.augmentations.backend == "albumentations":
                 self.test_ds = ImageClassificationFromDf(self.valid_df, self.valid_augs)
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.train_ds,
-            shuffle=True,
-            batch_size=self.bs,
-            num_workers=self.workers,
-            pin_memory=True if torch.cuda.is_available() else False,
-        )
+        return DataLoader(self.train_ds, shuffle=True, batch_size=self.bs, num_workers=self.workers,                                         pin_memory=True if torch.cuda.is_available() else False,)
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.valid_ds,
-            batch_size=self.bs,
-            num_workers=self.workers,
-            shuffle=False,
-            pin_memory=True if torch.cuda.is_available() else False,
-        )
+        return DataLoader(self.valid_ds, batch_size=self.bs, num_workers=self.workers,shuffle=False,
+                         pin_memory=True if torch.cuda.is_available() else False,)
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(
-            self.test_ds,
-            batch_size=self.bs,
-            num_workers=self.workers,
-            shuffle=False,
-            pin_memory=True if torch.cuda.is_available() else False,
-        )
+        return DataLoader(self.test_ds, batch_size=self.bs, num_workers=self.workers,
+                          shuffle=False, pin_memory=True if torch.cuda.is_available() else False,)

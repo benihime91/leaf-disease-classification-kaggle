@@ -173,8 +173,8 @@ def get_train_transformations(cfg: DictConfig):
 
     secondary_tfml = []
 
-    if cfg.rand_augment:
-        assert isinstance(cfg.rand_augment, str)
+    if cfg.auto_augment:
+        assert isinstance(cfg.auto_augment, str)
         if isinstance(cfg.img_size, tuple):
             img_size_min = min(cfg.img_size)
         else:
@@ -185,9 +185,14 @@ def get_train_transformations(cfg: DictConfig):
             img_mean=tuple([min(255, round(255 * x)) for x in mean]))
 
         if cfg.interpolation and cfg.interpolation != 'random':
-            aa_params['interpolation'] = _pil_interp(interpolation)
+            aa_params['interpolation'] = _pil_interp(cfg.interpolation)
 
-        secondary_tfml += [rand_augment_transform(cfg.rand_augment, aa_params)]
+        if cfg.auto_augment.startswith('rand'):
+            secondary_tfml += [rand_augment_transform(cfg.rand_augment, aa_params)]
+        elif cfg.auto_augment.startswith('augmix'):
+            assert 1==2, "Augmix not Supported"
+        else:
+            secondary_tfml += [auto_augment_transform(cfg.auto_augment, aa_params)]
 
     elif cfg.color_jitter is not None:
         # color jitter is enabled when not using AA
@@ -201,10 +206,7 @@ def get_train_transformations(cfg: DictConfig):
     final_tfml += [transforms.ToTensor(), transforms.Normalize(mean, std)]
 
     if cfg.re_prob > 0.0:
-        final_tfml.append(RandomErasing(cfg.re_prob, mode=cfg.re_mode,
-                                        max_count=cfg.re_count,
-                                        num_splits=cfg.re_num_splits,
-                                        device="cpu",))
+        final_tfml.append(transforms.RandomErasing(p=cfg.re_prob))
 
     return transforms.Compose(primary_tfml + secondary_tfml + final_tfml)
 
@@ -263,27 +265,14 @@ class FancyImageDataset(torch.utils.data.Dataset):
         self.curr_step: int = 0
 
         if transforms is None:
-            re_prob = cfg.augmentations.train.params.re_prob
-            rand_augment = cfg.augmentations.train.params.rand_augment
-
-            cfg.augmentations.train.params.re_prob = 0.0
-            cfg.augmentations.train.params.rand_augment = False
-            self.initial_tfms = get_train_transformations(cfg.augmentations.train.params)
-
-            cfg.augmentations.train.params.re_prob = re_prob
-            cfg.augmentations.train.params.rand_augment = rand_augment
-            cfg.augmentations.train.params.color_jitter = None
-
-            if cfg.augmentations.train.params.rand_augment:
-                cfg.augmentations.train.params.re_prob = 0.0
-
-            self.tfms = get_train_transformations(cfg.augmentations.train.params)
+            self.initial_tfms = get_train_transformations(cfg.augmentations.train.before_mix)
+            self.tfms = get_train_transformations(cfg.augmentations.train.after_mix)
 
         else:
             self.initial_tfms = None
             self.tfms = transforms
 
-        self.curr_tfms: transforms.Compose = None
+        self.curr_tfms = None
 
     def __len__(self):
         return len(self.df)
