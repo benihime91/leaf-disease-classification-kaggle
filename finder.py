@@ -76,7 +76,10 @@ def main(cfg: DictConfig):
     fig.savefig(_path)
 
     _logger.info("Compiling Lr-Finder results ...")
-    _logger.info(f"Suggested LR's : {lr_finder.suggestion():.7f}")
+    try:
+        _logger.info(f"Suggested LR's : {lr_finder.suggestion():.7f}")
+    except:
+        pass
     _logger.info(f"Results saved to {_path}")
 
 
@@ -89,6 +92,8 @@ if __name__ == "__main__":
     import warnings
 
     warnings.filterwarnings("ignore")
+    logging.getLogger("lightning").setLevel(logging.WARNING)
+    logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
 
     # run train
     cli_hydra()
