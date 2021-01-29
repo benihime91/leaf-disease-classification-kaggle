@@ -66,7 +66,7 @@ def main(cfg: DictConfig):
     # Run learning rate finder
     lr_finder = trainer.tuner.lr_find(model, datamodule=loaders)
 
-    fig = lr_finder.plot(suggest=True)
+    fig = lr_finder.plot(suggest=False)
 
     # create directory if does not exists
     os.makedirs(cfg.general.save_dir, exist_ok=True)
