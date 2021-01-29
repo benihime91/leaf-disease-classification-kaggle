@@ -10,7 +10,7 @@ train:
     vflip: 0.5
     interpolation: random
     auto_augment: null
-    color_jitter: 0.2
+    color_jitter: 0.1
     re_prob: 0.0
     mean: cassava
     std: cassava
@@ -20,11 +20,11 @@ train:
     scale: null
     ratio: null
     hflip: 0.5
-    vflip: 0.5
+    vflip: 0.0
     interpolation: random
-    auto_augment: rand-m10-n2
-    color_jitter: 0.2
-    re_prob: 0.5
+    auto_augment: rand-m11-n3-mstd0
+    color_jitter: 0.1
+    re_prob: 0.0
     mean: cassava
     std: cassava
 

@@ -188,7 +188,7 @@ def get_train_transformations(cfg: DictConfig):
             aa_params['interpolation'] = _pil_interp(cfg.interpolation)
 
         if cfg.auto_augment.startswith('rand'):
-            secondary_tfml += [rand_augment_transform(cfg.rand_augment, aa_params)]
+            secondary_tfml += [rand_augment_transform(cfg.auto_augment, aa_params)]
         elif cfg.auto_augment.startswith('augmix'):
             assert 1==2, "Augmix not Supported"
         else:
