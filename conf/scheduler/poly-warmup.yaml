@@ -1,8 +1,10 @@
 # @package scheduler
-name: LinearWarmup
+name: PolynomialDecayWarmup
 params:
   num_warmup_steps: 1
   num_training_steps: null
+  lr_end: 1e-07
+  power: 3
 monitor: null
 frequency: 1
 interval: step

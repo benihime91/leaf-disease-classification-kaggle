@@ -1,0 +1,14 @@
+# @package model
+base_model:
+  name: ${encoder}
+  activation: mish
+  params:
+    drop_path_rate: 0.25
+
+head:
+  name: CnnHeadV1
+  params:
+    n_out: 5
+    concat_pool: true
+    first_bn: True
+    act_layer: mish

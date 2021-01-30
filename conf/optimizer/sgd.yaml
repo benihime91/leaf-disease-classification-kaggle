@@ -1,5 +1,7 @@
 # @package optimizer
-_target_: torch.optim.SGD
-weight_decay: 1e-04
-momentum: 0.9
-nesterov: false
+name: SGD
+params:
+  lr: 1e-03
+  weight_decay: 1e-04
+  momentum: 0.9
+  nesterov: true

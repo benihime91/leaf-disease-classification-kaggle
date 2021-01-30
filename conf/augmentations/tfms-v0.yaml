@@ -1,0 +1,74 @@
+# @package augmentations
+backend: torchvision
+
+train:
+  BEFORE_MIX:
+    - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
+      size: ${image_dims}
+      interpolation: random
+
+    - _target_: torchvision.transforms.RandomHorizontalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ToTensor
+
+    - _target_: torchvision.transforms.Normalize
+      mean:
+        - 0.42984136
+        - 0.49624753
+        - 0.3129598
+      std:
+        - 0.21417203
+        - 0.21910103
+        - 0.19542212
+
+  AFTER_MIX:
+    - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
+      size: ${image_dims}
+      interpolation: random
+
+    - _target_: torchvision.transforms.RandomHorizontalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ColorJitter
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+
+    - _target_: torchvision.transforms.ToTensor
+
+    - _target_: torchvision.transforms.Normalize
+      mean:
+        - 0.42984136
+        - 0.49624753
+        - 0.3129598
+      std:
+        - 0.21417203
+        - 0.21910103
+        - 0.19542212
+
+    - _target_: torchvision.transforms.RandomErasing
+      p: 0.5
+      value: "random"
+
+valid:
+  - _target_: torchvision.transforms.Resize
+    size: 567
+    interpolation: 3
+  - _target_: torchvision.transforms.CenterCrop
+    size: ${image_dims}
+  - _target_: torchvision.transforms.Normalize
+    mean:
+      - 0.42984136
+      - 0.49624753
+      - 0.3129598
+    std:
+      - 0.21417203
+      - 0.21910103
+      - 0.19542212

@@ -1,5 +1,5 @@
 # @package mixmethod
-_target_: src.mixmethods.SnapMix
+_target_: src.data.mixmethods.Snapmix
 alpha: 5.0
-conf_prob: 1.0
-steps: 1000000000
+conf_prob: 0.5
+num_iters: 10

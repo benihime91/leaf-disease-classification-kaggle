@@ -1,7 +1,11 @@
 # @package scheduler
-function:
-  _target_: src.opts.FlatCos
-  num_epochs: ${num_epochs}
-  pct_start: 0.7
-metric_to_track: null # metric for ReduceLrOnPlateau Scheduler
-scheduler_interval: step # step or epoch
+name: FlatCosScheduler
+params:
+  epochs: null
+  steps_per_epoch: null
+  pct_start: 0.75
+  eta_min: 1e-08
+  last_epoch: -1
+monitor: null
+frequency: 1
+interval: step

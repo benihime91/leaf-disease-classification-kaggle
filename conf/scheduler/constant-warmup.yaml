@@ -1,8 +1,7 @@
 # @package scheduler
-name: LinearWarmup
+name: ConstantWarmup
 params:
   num_warmup_steps: 1
-  num_training_steps: null
 monitor: null
 frequency: 1
 interval: step

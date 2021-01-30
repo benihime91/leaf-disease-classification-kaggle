@@ -11,10 +11,8 @@ outputs/
 test_data/
 wandb/
 nbs/wandb/
-nbs/models/
 nbs/lightning_logs/
 lightning_logs/
-models
 nbs/kaggle-leaf-disease-fastai-runs
 nbs/experiments
 nbs/initials
