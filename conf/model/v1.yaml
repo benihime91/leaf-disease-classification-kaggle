@@ -1,8 +1,9 @@
 # @package model
 base_model:
   name: ${training.encoder}
-  activation: mish
+  activation: null
   params:
+    pretrained: true
     drop_path_rate: 0.25
 
 head:
@@ -11,4 +12,4 @@ head:
     n_out: 5
     concat_pool: true
     first_bn: True
-    act_layer: mish
+    act_layer: default
