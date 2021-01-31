@@ -55,12 +55,13 @@ class CassavaClassificationModule(LightningDataModule):
 
         self.valid_data = self.valid_data.sample(frac=1).reset_index(inplace=False, drop=True)
 
-    def setup(self, stage=None):
-        _logger.info("Data processing configuration for current dataset:")
-        _logger.info(f"\tinput_size: {cfg.input.input_size}")
-        _logger.info(f"\tmean: {tuple(cfg.input.mean)}")
-        _logger.info(f"\tstd: {tuple(cfg.input.std)}")
-        _logger.info(f"\tinterpolation: {cfg.input.interpolation}")
+    def setup(self, stage=None, verbose=False):
+        if verbose:
+            _logger.info("Data processing configuration for current dataset:")
+            _logger.info(f"\tinput_size: {cfg.input.input_size}")
+            _logger.info(f"\tmean: {tuple(cfg.input.mean)}")
+            _logger.info(f"\tstd: {tuple(cfg.input.std)}")
+            _logger.info(f"\tinterpolation: {cfg.input.interpolation}")
 
         self.augs_initial, self.augs_final, self.augs_valid = create_transform(self.tfms_cfg)
 
