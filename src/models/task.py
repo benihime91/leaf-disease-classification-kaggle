@@ -88,7 +88,7 @@ class Task(pl.LightningModule):
         self.preds  = list(preds.data.cpu().numpy())
 
         result_dict = {"train/loss": loss, "train/acc": acc}
-        self.log_dict(result_dict, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log_dict(result_dict, on_step=True, on_epoch=True, logger=True)
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int) -> None:

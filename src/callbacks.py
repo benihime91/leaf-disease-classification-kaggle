@@ -41,7 +41,7 @@ class WandbTask(Callback):
 
     def on_validation_epoch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
         preds   = torch.tensor(self.predictions).data.cpu().numpy()
-        vlabels = torch.tensor(self.labels).data.cpu().numpy()
+        labels = torch.tensor(self.labels).data.cpu().numpy()
 
         matrix = wandb.plot.confusion_matrix(preds, labels, self.class_names)
         wandb.log(dict(valid_confusion_matrix=matrix), commit=False)
@@ -55,7 +55,7 @@ class WandbTask(Callback):
 
     def on_test_epoch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
         preds   = torch.tensor(self.predictions).data.cpu().numpy()
-        vlabels = torch.tensor(self.labels).data.cpu().numpy()
+        labels = torch.tensor(self.labels).data.cpu().numpy()
 
         matrix = wandb.plot.confusion_matrix(preds, labels, self.class_names)
         wandb.log(dict(test_confusion_matrix=matrix), commit=False)
