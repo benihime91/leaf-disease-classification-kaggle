@@ -30,7 +30,6 @@ class BaseMixMethodHandler:
             self.distrib = np.random.beta(self.alpha, self.alpha)
         else:
             self.distrib = 1
-        self._logger.info(f"{self}")
 
     __repr__ = basic_repr("alpha,conf_prob,num_iters")
 
@@ -52,15 +51,12 @@ class BaseMixMethodHandler:
 
     def stop(self):
         "stops the mixmethod from furthur activation"
-        _logger.info(f"Manually stopping {self.__class__.__name__}.")
         self._curr_iter = self.num_iters
         self._is_active = False
         self._has_ended = True
         self._done_logging = False
 
-    def __call__(
-        self, inputs: torch.Tensor, targets: torch.Tensor, model: Module = None
-    ):
+    def __call__(self, inputs: torch.Tensor, targets: torch.Tensor, model: Module = None):
         "calls function"
         store_attr()
         if self.num_iters is not None:

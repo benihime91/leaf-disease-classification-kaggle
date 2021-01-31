@@ -1,0 +1,11 @@
+# @package input
+input_size: 512
+mean:
+  - 0.42984136
+  - 0.49624753
+  - 0.3129598
+std:
+  - 0.21417203
+  - 0.21910103
+  - 0.19542212
+interpolation: random

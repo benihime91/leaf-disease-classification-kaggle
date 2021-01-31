@@ -1,6 +1,6 @@
 # @package model
 base_model:
-  name: ${encoder}
+  name: ${training.encoder}
   activation: mish
   params:
     drop_path_rate: 0.25

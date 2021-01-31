@@ -1,0 +1,11 @@
+# @package data
+dataset:
+  csv: ${general.csv_path}
+  image_dir: ${general.image_dir}
+  fold: ${training.fold}
+
+dataloader:
+  batch_size: 32
+  num_workers: 0
+  pin_memory: true
+  drop_last: true

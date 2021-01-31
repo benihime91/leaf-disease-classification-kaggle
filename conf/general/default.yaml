@@ -1,7 +1,5 @@
 # @package general
-unique_idx: null # a unique id for the experiment if None, then generates one randomly
-project_name: kaggle-leaf-disease-hydra-cli # wandb project name
-random_seed: 42 # random seed for the expeiment
-save_dir: models/ # where to save the trained model weights
+project_name: kaggle-leaf-disease-hydra-cli
+save_dir: results/
 image_dir: /Users/ayushman/Desktop/Datasets/cassava/train_images/
 csv_path: /Users/ayushman/Desktop/leaf-disease-classification-kaggle/data/stratified-data-5folds.csv

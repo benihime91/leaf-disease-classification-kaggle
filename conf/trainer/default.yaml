@@ -1,11 +1,13 @@
 # @package trainer
 _target_: pytorch_lightning.Trainer
 gpus: -1
-accumulate_grad_batches: ${accumulate_batches}
+precision: 16
+weights_summary: null
+reload_dataloaders_every_epoch: true
 max_epochs: ${num_epochs}
+accumulate_grad_batches: 1
+clip_grad_norm: 0
+gradient_clip_val: 0.5
+deterministic: true
 log_every_n_steps: 1
 num_sanity_val_steps: 0
-gradient_clip_val: ${clip_grad_norm}
-weights_summary: null
-deterministic: true
-precision: 16

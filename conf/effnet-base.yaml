@@ -1,24 +1,16 @@
-defaults:
-  - hydra/job_logging: custom
-  - hydra/hydra_logging: custom
-  - augmentations: rotation-augs
-  - datamodule: default
-  - network: transferlearning
-  - mixmethod: default
-  - optimizer: adamw
-  - scheduler: linear-warmup
-  - loss: bi-tempered-logistic-loss
-  - general: kaggle
-  - trainer: default
-
-encoder: tf_efficientnet_b0_ns
-accumulate_batches: 1
-clip_grad_norm: 0
-image_dims: 512
-num_epochs: 10
-learning_rate: 1e-03
-lr_mult: 10
-
 hydra:
   run:
     dir: ${general.save_dir}
+
+defaults:
+  - general: kaggle
+  - training: effnet-3
+  - input: 512x512-cassava
+  - model: v0
+  - data: default
+  - augmentations: tfms-v0
+  - mixmethod: snapmix
+  - optimizer: ranger
+  - scheduler: flatcos
+  - loss: bi-tempered-logistic-loss
+  - trainer: default
