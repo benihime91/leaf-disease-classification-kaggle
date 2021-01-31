@@ -102,7 +102,7 @@ def main(cfg: DictConfig):
     wandb.save(conf_path)
 
 
-@hydra.main(config_path="conf", config_name="effnet-base")
+@hydra.main(config_path="conf", config_name="config")
 def cli_hydra(cfg: DictConfig):
     main(cfg)
 
