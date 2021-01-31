@@ -5,7 +5,7 @@ dataset:
   fold: ${training.fold}
 
 dataloader:
-  batch_size: 32
+  batch_size: ${training.batch_size}
   num_workers: 0
   pin_memory: true
-  drop_last: true
+  drop_last: false

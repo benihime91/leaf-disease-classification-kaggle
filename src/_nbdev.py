@@ -17,7 +17,7 @@ index = {"idx2lbl": "00_core.ipynb",
          "Cutmix": "01a_data.mixmethods.ipynb",
          "Snapmix": "01a_data.mixmethods.ipynb",
          "create_transform": "01b_data.datasests_factory.ipynb",
-         "create_loader": "01b_data.datasests_factory.ipynb",
+         "CassavaClassificationModule": "01b_data.datasests_factory.ipynb",
          "LabelSmoothingCrossEntropy": "02_losses.ipynb",
          "log_t": "02_losses.ipynb",
          "exp_t": "02_losses.ipynb",
@@ -76,10 +76,7 @@ index = {"idx2lbl": "00_core.ipynb",
          "PrintLogsCallback": "05b_lightning.callbacks.ipynb",
          "DisableProgressBar": "05b_lightning.callbacks.ipynb",
          "IterationTimer": "05b_lightning.callbacks.ipynb",
-         "ConsoleLogger": "05b_lightning.callbacks.ipynb",
-         "AlbumentationsTransform": "06_fastai.core.ipynb",
-         "timm_learner": "06_fastai.core.ipynb",
-         "timm_splitter": "06_fastai.core.ipynb"}
+         "ConsoleLogger": "05b_lightning.callbacks.ipynb"}
 
 modules = ["core.py",
            "data/datasets.py",
@@ -93,8 +90,7 @@ modules = ["core.py",
            "optimizers.py",
            "schedulers.py",
            "lightning/core.py",
-           "lightning/callbacks.py",
-           "fast/core.py"]
+           "lightning/callbacks.py"]
 
 doc_url = "https://fastai.github.io/src/"
 

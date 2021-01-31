@@ -16,7 +16,7 @@ train:
     - _target_: torchvision.transforms.ToTensor
 
     - _target_: torchvision.transforms.Normalize
-      mean: ${input.input_size}
+      mean: ${input.mean}
       std: ${input.std}
 
   after_mix:
@@ -34,23 +34,30 @@ train:
       brightness: 0.2
       contrast: 0.2
       saturation: 0.2
+      hue: 0.0
 
     - _target_: torchvision.transforms.ToTensor
 
     - _target_: torchvision.transforms.Normalize
-      mean: ${input.input_size}
+      mean: ${input.mean}
       std: ${input.std}
 
-    - _target_: torchvision.transforms.RandomErasing
-      p: 0.5
-      value: random
+    - _target_: timm.data.random_erasing.RandomErasing
+      probability: 1.
+      device: cpu
+      max_count: 1
+      mode: rand
 
 valid:
   - _target_: torchvision.transforms.Resize
     size: 567
     interpolation: 3
+
   - _target_: torchvision.transforms.CenterCrop
     size: ${input.input_size}
+
+  - _target_: torchvision.transforms.ToTensor
+
   - _target_: torchvision.transforms.Normalize
-    mean: ${input.input_size}
+    mean: ${input.mean}
     std: ${input.std}
