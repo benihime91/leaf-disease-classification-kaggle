@@ -63,7 +63,7 @@ def main(cfg: DictConfig):
         DisableValidationBar(),
         LogInformationCallback(),
         LearningRateMonitor(cfg.scheduler.interval),
-        EarlyStopping(monitor="valid/acc", patience=cfg.training.patience),
+        EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"),
     ]
 
     wandblogger = WandbLogger(project=cfg.general.project_name, log_model=True)
