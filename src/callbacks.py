@@ -32,19 +32,19 @@ class WandbTask(Callback):
         try   : wandb.watch(models=pl_module.model, criterion=pl_module.criterion)
         except: pass
 
-    def on_validation_epoch_start(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
-        self.labels, self.predictions = [], []
+    # def on_validation_epoch_start(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
+    #     self.labels, self.predictions = [], []
 
-    def on_validation_batch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
-        self.labels = self.labels + pl_module.labels
-        self.predictions = self.predictions + pl_module.preds
+    # def on_validation_batch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
+    #     self.labels = self.labels + pl_module.labels
+    #     self.predictions = self.predictions + pl_module.preds
 
-    def on_validation_epoch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
-        preds   = torch.tensor(self.predictions).data.cpu().numpy()
-        labels = torch.tensor(self.labels).data.cpu().numpy()
+    # def on_validation_epoch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
+    #     preds   = torch.tensor(self.predictions).data.cpu().numpy()
+    #     labels = torch.tensor(self.labels).data.cpu().numpy()
 
-        matrix = wandb.plot.confusion_matrix(preds, labels, self.class_names)
-        wandb.log(dict(valid_confusion_matrix=matrix), commit=False)
+    #     matrix = wandb.plot.confusion_matrix(preds, labels, self.class_names)
+    #     wandb.log(dict(valid_confusion_matrix=matrix), commit=False)
 
     def on_test_epoch_start(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
         self.labels, self.predictions = [], []
