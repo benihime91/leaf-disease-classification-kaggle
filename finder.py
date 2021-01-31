@@ -15,7 +15,7 @@ logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
 
 
 def main(cfg: DictConfig):
-    _ = seed_everything(cfg.general.random_seed)
+    _ = seed_everything(cfg.training.random_seed)
     task = Task(cfg)
     trainer = instantiate(cfg.trainer)
     # Run learning rate finder
