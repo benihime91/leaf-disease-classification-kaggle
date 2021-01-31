@@ -19,135 +19,93 @@ The main aim of the scipt is to iterate over different experimentations with min
 Note: To use the lr_finder algorithm to get a good starting learning rate, run the script finder.py.
 See (https://pytorch-lightning.readthedocs.io/en/latest/lr_finder.html)
 """
-import os
 import logging
+import os
+import warnings
 
-import albumentations as A
 import hydra
+import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import (
+    EarlyStopping,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
 from pytorch_lightning.loggers import WandbLogger
 
-from src.all import *
+from src.callbacks import DisableValidationBar, LogInformationCallback, WandbTask
+from src.core import generate_random_id, seed_everything
+from src.models import Task
 
-_logger = logging.getLogger("train")
-_logger.setLevel(logging.INFO)
+warnings.filterwarnings("ignore")
+logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
 
 
 def main(cfg: DictConfig):
-    # init wandb experiment
-    wb_logger = WandbLogger(project=cfg.general.project_name, log_model=True)
-    wb_logger.log_hyperparams(cfg)
+    # set random seeds so that results are reproducible
+    seed_everything(cfg.training.random_seed)
 
-    _ = seed_everything(cfg.general.random_seed)
+    # generate a random idx for the job
+    if cfg.training.unique_idx is None:
+        cfg.training.unique_idx = generate_random_id()
 
-    if cfg.general.unique_idx is None:
-        cfg.general.unique_idx = generate_random_id()
+    uq_id = cfg.training.unique_idx
+    model_name = f"{cfg.training.encoder}-fold={cfg.training.fold}-{uq_id}"
 
-    uq_id = cfg.general.unique_idx
-    model_name = f"{cfg.encoder}-fold={cfg.datamodule.curr_fold}-{uq_id}"
+    # set up cassava image classification Task
+    model = Task(cfg)
 
-    # set up training data pipeline
-    if cfg.augmentations.backend == "albumentations":
-        trn_augs = A.Compose([instantiate(a) for a in cfg.augmentations.train])
-        val_augs = A.Compose([instantiate(a) for a in cfg.augmentations.valid])
-        _logger.info("Loaded albumentations transformations.")
-    else:
-        trn_augs, val_augs = None, None
-
-    # set up data-module for training
-    loaders = instantiate(
-        config=cfg.datamodule,
-        train_augs=trn_augs,
-        valid_augs=val_augs,
-        default_config=cfg,
-    )
-
-    # instantiate the base model architecture + activation function
-    if cfg.network.activation is not None:
-        act_func = activation_map[cfg.network.activation]
-        _logger.info(f"{act_func(inplace=True)} loaded .")
-    else:
-        act_func = None
-        _logger.info(f"Default activation function(s) loaded .")
-
-    # with timm models pass in act_layer args to modify the activations layers
-    try:
-        net = instantiate(cfg.network.model, act_layer=act_func)
-    except:
-        # @TODO: find a way to replace activations with mdoels from pretrainedmdeols lib
-        net = instantiate(cfg.network.model)
-
-    # build the transfer learning network
-    net = instantiate(
-        config=cfg.network.transfer_learning_model,
-        encoder=net,
-        act=act_func(inplace=True),
-    )
-
-    # init the LightningModule
-    if isinstance(net, VisionTransformer):
-        model = LightningVisionTransformer(net, conf=cfg)
-    else:
-        model = LightningCassava(net, conf=cfg)
-
-    # initialize pytorch_lightning Trainer + Callbacks
     cbs = [
-        WandbImageClassificationCallback(log_conf_mat=True),
-        DisableProgressBar(),
-        ConsoleLogger(print_every=100),
-        LearningRateMonitor(cfg.scheduler.scheduler_interval),
+        WandbTask(),
+        DisableValidationBar(),
+        LogInformationCallback(),
+        LearningRateMonitor(cfg.scheduler.interval),
+        EarlyStopping(monitor="valid/acc", patience=cfg.training.patience),
     ]
 
-    chkpt_cb = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
-    # set up trainder kwargs
-    _trn_kwargs = dict(checkpoint_callback=chkpt_cb, callbacks=cbs, logger=wb_logger)
-    trainer: Trainer = instantiate(cfg.trainer, **_trn_kwargs)
+    wandblogger = WandbLogger(project=cfg.general.project_name, log_model=True)
+    wandblogger.log_hyperparams(cfg)
 
-    # Start Train + Validation
-    loaders.prepare_data()
-    loaders.setup()
-    trainer.fit(model, datamodule=loaders)
+    checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
+
+    # set up trainder kwargs
+    _trn_kwargs = dict(
+        checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger
+    )
+
+    trainer = instantiate(cfg.trainer, **_trn_kwargs)
+
+    trainer.fit(model)
 
     # Laod in the best checkpoint and save the model weights
-    ckpt_path = chkpt_cb.best_model_path
-
+    checkpointPath = checkpointCallback.best_model_path
     # Testing Stage
-    _ = trainer.test(datamodule=loaders, verbose=False, ckpt_path=ckpt_path)
+    _ = trainer.test(verbose=False, ckpt_path=checkpointPath)
 
     # load in the best model weights
-    model.load_state_from_checkpoint(ckpt_path)
-
-    # create model save dir
+    model = Task.load_from_checkpoint(checkpointPath)
+    # create model save dir to save the weights of the
+    # vanilla torch-model
     os.makedirs(cfg.general.save_dir, exist_ok=True)
-    _path = os.path.join(cfg.general.save_dir, f"{model_name}.pt")
-
+    path = os.path.join(cfg.general.save_dir, f"{model_name}.pt")
     # save the weights of the model
-    model.save_model_weights(_path)
-
+    torch.save(model.model.state_dict(), f=path)
     # upload trained weights to wandb
-    wandb.save(_path)
+    wandb.save(path)
 
     # save the original compiles config file to wandb
-    conf_path = os.path.join(cfg.general.save_dir, "cfg.yaml")
+    conf_path = os.path.join(cfg.general.save_dir, "cfg.yml")
     OmegaConf.save(cfg, f=conf_path)
     wandb.save(conf_path)
 
 
-@hydra.main(config_path="conf", config_name="02-01-20-seresnext50_32x4d")
+@hydra.main(config_path="conf", config_name="effnet-base")
 def cli_hydra(cfg: DictConfig):
     main(cfg)
 
 
 if __name__ == "__main__":
-    import warnings
-
-    warnings.filterwarnings("ignore")
-    logging.getLogger("lightning").setLevel(logging.WARNING)
-    logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
-
     # run train
     cli_hydra()
