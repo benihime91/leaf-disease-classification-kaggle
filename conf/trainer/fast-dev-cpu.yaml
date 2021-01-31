@@ -1,13 +1,13 @@
 # @package trainer
 _target_: pytorch_lightning.Trainer
-accumulate_grad_batches: ${accumulate_batches}
-profiler: False
-max_epochs: 2
+max_epochs: ${training.num_epochs}
+accumulate_grad_batches: ${training.accumulate_grad_batches}
 log_every_n_steps: 1
 num_sanity_val_steps: 0
-gradient_clip_val: ${clip_grad_norm}
-weights_summary: null
-deterministic: true
+gradient_clip_val: 0.5
 limit_train_batches: 1
 limit_val_batches: 1
 limit_test_batches: 1
+deterministic: true
+weights_summary: top
+reload_dataloaders_every_epoch: true

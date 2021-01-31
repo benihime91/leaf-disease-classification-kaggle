@@ -2,14 +2,4 @@
 name: Ranger
 params:
   lr: 1e-3
-  alpha: 0.5
-  k: 6
-  N_sma_threshhold: 5
-  use_gc: true
-  gc_conv_only: false
-  gc_loc: true
   weight_decay: 1e-02
-  betas:
-    - .95
-    - 0.99
-  eps: 1e-05
