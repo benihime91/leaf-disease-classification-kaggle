@@ -2,9 +2,10 @@
 unique_idx: null
 random_seed: 42
 fold: 0
-batch_size: 32
 encoder: tf_efficientnet_b3_ns
 learning_rate: 8e-03
 lr_mult: 10
 num_epochs: 20
 mix_epochs: 17
+batch_size: 32
+accumulate_grad_batches: 2
