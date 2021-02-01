@@ -40,8 +40,6 @@ from src.core import generate_random_id, seed_everything
 from src.models import Task
 
 warnings.filterwarnings("ignore")
-logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
-logging.getLogger("lightning").setLevel(logging.WARNING)
 
 
 def main(cfg: DictConfig):

@@ -11,7 +11,6 @@ from src.core import seed_everything
 from src.models import Task
 
 warnings.filterwarnings("ignore")
-logging.getLogger("numexpr.utils").setLevel(logging.WARNING)
 
 
 def main(cfg: DictConfig):
