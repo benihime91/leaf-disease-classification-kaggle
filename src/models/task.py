@@ -39,10 +39,6 @@ class Task(pl.LightningModule):
         self.criterion   = instantiate(self.hparams.loss)
         self.mixfunction = instantiate(self.hparams.mixmethod)
 
-        _logger.info(f"LossFunction: {self.criterion}")
-        if self.mixfunction is not None:
-            _logger.info(f"Training with {self.mixfunction}.")
-
         self.lrs= None
 
     def setup(self, stage: str):
@@ -51,7 +47,7 @@ class Task(pl.LightningModule):
         mapper.generate_datasets()
 
         # Loads in the repective datasets
-        self.train_dset = mapper.get_test_dataset()
+        self.train_dset = mapper.get_train_dataset()
         self.valid_dset = mapper.get_valid_dataset()
         self.test_dset  = mapper.get_test_dataset()
 
@@ -152,7 +148,6 @@ class Task(pl.LightningModule):
         if self.current_epoch == self.hparams.training.mix_epochs:
             if self.mixfunction is not None:
                 name = self.mixfunction.__class__.__name__
-                _logger.info(f"Train [ {self.current_epoch}/{self.trainer.max_epochs}]: Stopping {name} !")
                 self.mixfunction.stop()
 
             self.train_dset.reload_transforms(self.final_augs)

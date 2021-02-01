@@ -71,14 +71,12 @@ class BaseMixMethodHandler:
 
             if self._check_has_ended():
                 if not self._done_logging:
-                    self._logger.info(f"{self.__class__.__name__} Stopped .")
                     self._done_logging = True
                 self._is_active = False
 
         else:
             if self._check_has_ended():
                 if not self._done_logging:
-                    self._logger.info(f"{self.__class__.__name__} Stopped .")
                     self._done_logging = True
                 self._is_active = False
             else:

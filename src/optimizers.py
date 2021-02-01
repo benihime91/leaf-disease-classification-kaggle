@@ -177,5 +177,4 @@ class Ranger(Optimizer):
 def create_optimizer(cfg: DictConfig, params):
     "loaded a optimizer in OPTIM_REGISTERY from `cfg`"
     optimizer = OPTIM_REGISTERY.get(cfg.name)(params=params, **cfg.params)
-    _logger.info(f"{cfg.name} loaded from OPTIM_REGISTERY")
     return optimizer

@@ -44,8 +44,7 @@ class DatasetMapper:
         self.fold = self.dset_cfg.fold
 
     def generate_datasets(self):
-        _logger.info(f"Generating Datasets for FOLD :{self.fold}")
-
+        "generates datasets and repective transformations from HYDRA config file"
         # loads the data correspoind to the current fold
         # and do some data preprocessing
         self.data = load_data(self.dset_cfg.csv, self.dset_cfg.image_dir, self.fold, shuffle=True)
@@ -56,16 +55,21 @@ class DatasetMapper:
         self.train_data = self.train_data.sample(frac=1).reset_index(inplace=False, drop=True)
         self.valid_data = self.valid_data.sample(frac=1).reset_index(inplace=False, drop=True)
 
+        
+        # Train Test split for validation and test dataset
         self.test_data, self.valid_data = train_test_split(self.valid_data, shuffle=True,
                                                            test_size=0.5,
                                                            random_state=self.cfg.training.random_seed,
                                                            stratify=self.valid_data["label"])
 
-        self.test_data = self.test_data.sample(frac=1).reset_index(inplace=False, drop=True)
+        self.test_data  = self.test_data.sample(frac=1).reset_index(inplace=False, drop=True)
         self.valid_data = self.valid_data.sample(frac=1).reset_index(inplace=False, drop=True)
 
+        # Loads transformations from the HYDRA config file
         self.augs_initial, self.augs_final, self.augs_valid = create_transform(self.tfm_config)
 
+
+        # Instantiate the Datasets for Training
         self.train_ds = CassavaDataset(self.train_data, fn_col="filePath", label_col="label",
                                       transform=self.augs_initial, backend=self.tfm_config.backend)
 
@@ -74,12 +78,6 @@ class DatasetMapper:
 
         self.test_ds  = CassavaDataset(self.test_data, fn_col="filePath", label_col="label",
                                        transform=self.augs_valid, backend=self.tfm_config.backend)
-
-
-        _logger.info(
-            f"Train Dataset: {len(self.train_ds)} | Validation Dataset: {len(self.valid_ds)} |"
-            f" Test Dataset: {len(self.test_ds)}"
-        )
 
     def get_train_dataset(self):
         "returns the train dataset"

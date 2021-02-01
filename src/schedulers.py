@@ -243,8 +243,6 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
 
     lr_scheduler = SCHEDULER_REGISTERY.get(cfg.name)(optimizer=optimizer, **cfg.params)
 
-    _logger.info(f"{cfg.name} loaded from SCHEDULER_REGISTERY")
-
     scheduler = dict(
         scheduler=lr_scheduler,
         monitor=cfg.monitor,

@@ -1,8 +1,8 @@
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 from loguru import logger as _logger
 import sys
 
 _logger.remove()
-_fmt = "<green>{time:MM/DD HH:mm}</green> - <cyan>{name}</cyan> - <level>{level}</level> - {message}"
-_logger.add(sys.stderr, format=_fmt, colorize=True)
+format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <cyan>{name: <20}</cyan>: [<level>{level: <8}</level>] - {message}"
+_logger.add(sys.stdout, format=format, colorize=True)

@@ -3,6 +3,7 @@ hydra:
     dir: ${general.save_dir}
 
 defaults:
+  - hydra/job_logging: custom
   - general: kaggle
   - training: effnet-3
   - input: 512x512-cassava
