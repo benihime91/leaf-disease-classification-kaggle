@@ -58,7 +58,6 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
             disable=self.is_disabled,
             leave=False,
             dynamic_ncols=True,
-            file=sys.stderr,
         )
         return bar
 
@@ -71,7 +70,6 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
             disable=self.is_disabled,
             leave=True,
             dynamic_ncols=True,
-            file=sys.stderr,
             smoothing=0,
         )
         return bar
@@ -84,7 +82,6 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
             disable=True,
             leave=False,
             dynamic_ncols=True,
-            file=sys.stderr,
         )
         return bar
 
@@ -96,7 +93,6 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
             disable=self.is_disabled,
             leave=True,
             dynamic_ncols=True,
-            file=sys.stderr,
         )
         return bar
 
