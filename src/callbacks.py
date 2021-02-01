@@ -3,6 +3,8 @@
 __all__ = ['WandbTask', 'DisableValidationBar', 'LogInformationCallback']
 
 # Cell
+import copy
+import sys
 import time
 from collections import namedtuple
 
@@ -12,7 +14,6 @@ import wandb
 from pytorch_lightning import Callback, Trainer
 from timm.utils import AverageMeter
 from tqdm.auto import tqdm
-import copy
 
 from src import _logger
 from .core import conf_mat_idx2lbl, idx2lbl
@@ -23,28 +24,13 @@ class WandbTask(Callback):
     """ Custom callback to add some extra functionalites to the wandb logger
     Does the following:
         1. Logs the model graph to wandb.
-        2. Logs confusion matrix of preds/labels for each validation epoch.
-        3. Logs confusion matrix of preds/labels after testing.
+        2. Logs confusion matrix of preds/labels after testing.
     """
     class_names = list(conf_mat_idx2lbl.values())
 
     def on_train_start(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
         try   : wandb.watch(models=pl_module.model, criterion=pl_module.criterion)
         except: pass
-
-    # def on_validation_epoch_start(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
-    #     self.labels, self.predictions = [], []
-
-    # def on_validation_batch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
-    #     self.labels = self.labels + pl_module.labels
-    #     self.predictions = self.predictions + pl_module.preds
-
-    # def on_validation_epoch_end(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
-    #     preds   = torch.tensor(self.predictions).data.cpu().numpy()
-    #     labels = torch.tensor(self.labels).data.cpu().numpy()
-
-    #     matrix = wandb.plot.confusion_matrix(preds, labels, self.class_names)
-    #     wandb.log(dict(valid_confusion_matrix=matrix), commit=False)
 
     def on_test_epoch_start(self, trainer: Trainer, pl_module: Task, *args, **kwrags) -> None:
         self.labels, self.predictions = [], []
@@ -66,22 +52,52 @@ class DisableValidationBar(pl.callbacks.ProgressBar):
 
     def init_sanity_tqdm(self) -> tqdm:
         """ Override this to customize the tqdm bar for the validation sanity run. """
-        bar = tqdm(desc="Validation sanity check", dynamic_ncols=True,)
+        bar = tqdm(
+            desc='Validation sanity check',
+            position=(2 * self.process_position),
+            disable=self.is_disabled,
+            leave=False,
+            dynamic_ncols=True,
+            file=sys.stderr,
+        )
         return bar
 
     def init_train_tqdm(self) -> tqdm:
         """ Override this to customize the tqdm bar for training. """
-        bar = tqdm(desc="Training", disable=self.is_disabled, dynamic_ncols=True,)
+        bar = tqdm(
+            desc='Training',
+            initial=self.train_batch_idx,
+            position=(2 * self.process_position),
+            disable=self.is_disabled,
+            leave=True,
+            dynamic_ncols=True,
+            file=sys.stderr,
+            smoothing=0,
+        )
         return bar
 
     def init_validation_tqdm(self) -> tqdm:
         """ Override this to customize the tqdm bar for validation. """
-        bar = tqdm(desc="Validating", disable=True, dynamic_ncols=False,)
+        bar = tqdm(
+            desc='Validating',
+            position=(2 * self.process_position + 1),
+            disable=True,
+            leave=False,
+            dynamic_ncols=True,
+            file=sys.stderr,
+        )
         return bar
 
     def init_test_tqdm(self) -> tqdm:
         """ Override this to customize the tqdm bar for testing. """
-        bar = tqdm(desc="Testing", disable=self.is_disabled, dynamic_ncols=True,)
+        bar = tqdm(
+            desc='Testing',
+            position=(2 * self.process_position),
+            disable=self.is_disabled,
+            leave=True,
+            dynamic_ncols=True,
+            file=sys.stderr,
+        )
         return bar
 
 # Cell

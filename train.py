@@ -66,17 +66,19 @@ def main(cfg: DictConfig):
         EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"),
     ]
 
-    wandblogger = WandbLogger(project=cfg.general.project_name, log_model=True)
+    wandblogger = WandbLogger(
+        project=cfg.general.project_name, 
+        log_model=True, 
+        name=cfg.training.job_name)
+
     wandblogger.log_hyperparams(cfg)
 
     checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
 
     # set up trainder kwargs
-    _trn_kwargs = dict(
-        checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger
-    )
+    kwds = dict(checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger)
 
-    trainer = instantiate(cfg.trainer, **_trn_kwargs)
+    trainer = instantiate(cfg.trainer, **kwds)
 
     trainer.fit(model)
 

@@ -10,3 +10,4 @@ mix_epochs: 17
 batch_size: 32
 accumulate_grad_batches: 2
 patience: 5
+job_name: ${hydra:job.name}
