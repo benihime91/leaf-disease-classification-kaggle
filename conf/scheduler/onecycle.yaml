@@ -1,5 +1,5 @@
 # @package scheduler
-name: CycleLR
+name: OneCycleLR
 params:
   pct_start: 0.3
   cycle_momentum: true
