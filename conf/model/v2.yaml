@@ -4,7 +4,7 @@ base_model:
   activation: null
   params:
     pretrained: true
-    drop_path_rate: 0.25
+    drop_path_rate: 0.2
 
 head:
   name: CnnHeadV2

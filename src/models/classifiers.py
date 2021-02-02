@@ -19,10 +19,14 @@ CLASSIFIER_REGISTERY = registry.Registry("Classifiers")
 
 # Cell
 @CLASSIFIER_REGISTERY.register()
-def CnnHeadV0(nf, n_out, pool_type="avg", use_conv=False, **kwargs):
+def CnnHeadV0(nf, n_out, pool_type="avg", use_conv=False, drop=0.5, **kwargs):
     "create a classifier from timm lib"
-    ls = create_classifier(nf, n_out, pool_type, use_conv)
-    return nn.Sequential(*ls)
+    global_pool, fc = create_classifier(nf, n_out, pool_type, use_conv)
+    if drop > 0:
+        head = nn.Sequential(nn.Dropout(drop), global_pool, fc)
+    else:
+        head = nn.Sequential(*ls)
+    return head
 
 # Cell
 @CLASSIFIER_REGISTERY.register()

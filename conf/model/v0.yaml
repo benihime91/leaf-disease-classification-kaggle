@@ -4,12 +4,13 @@ base_model:
   activation: null
   params:
     pretrained: true
-    drop_path_rate: 0.25
+    drop_path_rate: 0.2
 
 head:
   name: CnnHeadV0
   params:
     n_out: 5
-    pool_type: "avg"
+    drop: 0.3
+    pool_type: avg
     use_conv: false
     act_layer: default
