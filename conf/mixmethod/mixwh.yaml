@@ -1,0 +1,6 @@
+# @package mixmethod
+_target_: MixupWH
+alpha: 0.5
+epochs:
+  - 10
+  - 8

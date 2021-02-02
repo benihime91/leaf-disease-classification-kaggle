@@ -12,13 +12,15 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from pytorch_lightning.metrics import Accuracy
+from src import _logger
+
+from src.data.mixmethods import BaseMixMethodHandler
 from torch.utils.data import DataLoader
 
-from src import _logger
 from ..data import DatasetMapper
-from .builder import Net
 from ..optimizers import create_optimizer
 from ..schedulers import create_scheduler
+from .builder import Net
 
 warnings.filterwarnings("ignore")
 
@@ -37,7 +39,7 @@ class Task(pl.LightningModule):
         # instantiate objects
         self.model = Net(self.hparams)
         self.criterion   = instantiate(self.hparams.loss)
-        self.mixfunction = instantiate(self.hparams.mixmethod)
+        self.mixfunction : BaseMixMethodHandler = instantiate(self.hparams.mixmethod)
 
         self.lrs= None
 
@@ -66,21 +68,27 @@ class Task(pl.LightningModule):
         self.example_input_array = imgs
 
         if self.mixfunction is not None:
-            if self.current_epoch < self.hparams.training.mix_epochs :
-                imgs = self.mixfunction(imgs, targs, model=self.model)
+            if self.hparams.training.mix_epochs is not None:
+                if self.current_epoch < self.hparams.training.mix_epochs :
+                    imgs = self.mixfunction(imgs, targs, model=self.model, epoch=self.current_epoch)
+                    logits= self.forward(imgs)
+                    loss= self.mixfunction.lf(logits, loss_func=self.criterion)
+                
+                else:
+                    logits = self.forward(imgs)
+                    loss   = self.criterion(logits, targs)
+            
+            else:
+                # in threshold for mix epochs is given then call do mix
+                imgs  = self.mixfunction(imgs, targs, model=self.model, epoch=self.current_epoch)
                 logits= self.forward(imgs)
                 loss= self.mixfunction.lf(logits, loss_func=self.criterion)
-                acc = self.trn_metric(logits, targs)
-            else:
-                logits = self.forward(imgs)
-                loss   = self.criterion(logits, targs)
-                acc    = self.trn_metric(logits, targs)
 
         else:
             logits = self.forward(imgs)
             loss   = self.criterion(logits, targs)
-            acc    = self.trn_metric(logits, targs)
-
+        
+        acc    = self.trn_metric(logits, targs)
         preds  = torch.argmax(logits, 1)
         self.labels = list(targs.data.cpu().numpy())
         self.preds  = list(preds.data.cpu().numpy())
@@ -145,13 +153,16 @@ class Task(pl.LightningModule):
 
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
         "returns a PyTorch DataLoader for Training"
-        if self.current_epoch == self.hparams.training.mix_epochs:
-            if self.mixfunction is not None:
-                name = self.mixfunction.__class__.__name__
-                self.mixfunction.stop()
+        if self.hparams.training.mix_epochs is not None:
+            if self.current_epoch == self.hparams.training.mix_epochs:
+                if self.mixfunction is not None:
+                    name = self.mixfunction.__class__.__name__
+                    self.mixfunction.stop()
 
-            self.train_dset.reload_transforms(self.final_augs)
-            dataloader = torch.utils.data.DataLoader(self.train_dset, **self.hparams.data.dataloader)
+                self.train_dset.reload_transforms(self.final_augs)
+                dataloader = torch.utils.data.DataLoader(self.train_dset, **self.hparams.data.dataloader)
+            else:
+                dataloader = torch.utils.data.DataLoader(self.train_dset, **self.hparams.data.dataloader)
         else:
             dataloader = torch.utils.data.DataLoader(self.train_dset, **self.hparams.data.dataloader)
         return dataloader

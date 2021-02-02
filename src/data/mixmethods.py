@@ -3,15 +3,15 @@
 __all__ = ['BaseMixMethodHandler', 'Mixup', 'Cutmix', 'Snapmix']
 
 # Cell
-import numpy as np
-from collections import namedtuple
+import random
 
+import numpy as np
 import torch
 import torch.nn.functional as F
+from fastcore.all import basic_repr, delegates, ifnone, store_attr
+from src import _logger
 from torch.nn import Module
 
-from fastcore.all import store_attr, ifnone, delegates, basic_repr
-from src import _logger
 
 # Cell
 class BaseMixMethodHandler:
@@ -22,9 +22,7 @@ class BaseMixMethodHandler:
     _has_ended = False
     device = None
 
-    def __init__(
-        self, alpha: float = 0.5, conf_prob: float = 1.0, num_iters: int = None
-    ):
+    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, num_iters: int = None):
         store_attr()
         if self.alpha > 0.0:
             self.distrib = np.random.beta(self.alpha, self.alpha)
@@ -56,7 +54,7 @@ class BaseMixMethodHandler:
         self._has_ended = True
         self._done_logging = False
 
-    def __call__(self, inputs: torch.Tensor, targets: torch.Tensor, model: Module = None):
+    def __call__(self, inputs: torch.Tensor, targets: torch.Tensor, model: Module = None, *args, **kwargs):
         "calls function"
         store_attr()
         if self.num_iters is not None:
@@ -278,7 +276,7 @@ class Snapmix(BaseMixMethodHandler):
             return outmaps, clslogit
 
 
-    def call(self, inputs, targets, model):
+    def call(self, inputs, targets, model, *args, **kwargs):
         """For `Snapmix` a `model` must be passed & the `model` should have `get_classifier` method
         and a `forward_features` method.
         """
@@ -341,3 +339,65 @@ class Snapmix(BaseMixMethodHandler):
         loss_b = loss_func(outputs, self.target_b)
         loss = torch.mean(loss_a*self.lam_a + loss_b*self.lam_b)
         return loss
+
+
+class MixupWH(BaseMixMethodHandler):
+    "implementation of `https://arxiv.org/pdf/2101.04342.pdf`"
+    def __init__(self, alpha: float, epochs: list, *args, **kwargs):
+        super(Mixup, self).__init__()  
+        store_attr()
+        self.device = None
+
+    __repr__ = basic_repr("alpha, epochs")
+
+    def stop(self):
+        # do nothing
+        pass
+
+    def mixup_data(self, x, y):
+        if self.alpha > 0.:
+            lam = np.random.beta(self.alpha, self.alpha)
+            self.lam = max(lam, 1-lam)
+        else:
+            self.lam = 1.
+
+        self.lam = torch.tensor(self.lam, device=self.device)
+       
+        batch_size = x.size()[0]
+        
+        index = torch.randperm(batch_size, device=self.device)
+        
+        mixed_x = self.lam * x + (1 - self.lam) * x[index,:]
+        
+        y_a, y_b = y, y[index]
+        return mixed_x, y_a, y_b
+
+    def __call__(self, inputs: torch.Tensor, targets: torch.Tensor, epoch: int, *args, **kwargs):
+        mask = random.random()
+        self.device = ifnone(inputs.device, self.device)
+        # mixup-without-hesitation implementation
+        if epoch >= self.epochs[0]:
+            threshold = (100 - epoch) / (100 - 90)
+            if mask < threshold:
+                inputs, targets_a, targets_b = self.mixup_data(inputs, targets)
+            else:
+                targets_a, targets_b = targets, targets
+                self.lam = 1.0
+        elif epoch >= self.epochs[0]:
+            if epoch % 2 == 0:
+                inputs, targets_a, targets_b = self.mixup_data(inputs, targets)
+            else:
+                targets_a, targets_b = targets, targets
+                self.lam = 1.0
+        else:
+            inputs, targets_a, targets_b= self.mixup_data(inputs, targets)
+
+        self.target_a, self.target_b = targets_a, targets_b
+        return inputs
+
+    def lf(self, outputs: torch.Tensor, loss_func: Module):
+        loss_a = loss_func(outputs, self.target_a)
+        loss_b = loss_func(outputs, self.target_b)
+        loss = torch.mean(loss_a*self.lam + (1 - self.lam)*loss_b)
+        return loss
+
