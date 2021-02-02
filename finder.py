@@ -4,13 +4,14 @@ import warnings
 
 import hydra
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from src import _logger as logger
 from src.core import seed_everything
 from src.models import Task
 
 warnings.filterwarnings("ignore")
+OmegaConf.register_resolver("eval", lambda x: eval(x))
 
 
 def main(cfg: DictConfig):

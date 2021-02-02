@@ -40,6 +40,7 @@ from src.core import generate_random_id, seed_everything
 from src.models import Task
 
 warnings.filterwarnings("ignore")
+OmegaConf.register_resolver("eval", lambda x: eval(x))
 
 
 def main(cfg: DictConfig):
@@ -65,16 +66,17 @@ def main(cfg: DictConfig):
     ]
 
     wandblogger = WandbLogger(
-        project=cfg.general.project_name, 
-        log_model=True, 
-        name=cfg.training.job_name)
+        project=cfg.general.project_name, log_model=True, name=cfg.training.job_name
+    )
 
     wandblogger.log_hyperparams(cfg)
 
     checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
 
     # set up trainder kwargs
-    kwds = dict(checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger)
+    kwds = dict(
+        checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger
+    )
 
     trainer = instantiate(cfg.trainer, **kwds)
 
