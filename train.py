@@ -19,7 +19,6 @@ The main aim of the scipt is to iterate over different experimentations with min
 Note: To use the lr_finder algorithm to get a good starting learning rate, run the script finder.py.
 See (https://pytorch-lightning.readthedocs.io/en/latest/lr_finder.html)
 """
-import logging
 import os
 import warnings
 
@@ -28,11 +27,7 @@ import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import (
-    EarlyStopping,
-    LearningRateMonitor,
-    ModelCheckpoint,
-)
+from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from src.callbacks import DisableValidationBar, LogInformationCallback, WandbTask
@@ -44,6 +39,11 @@ OmegaConf.register_resolver("eval", lambda x: eval(x))
 
 
 def main(cfg: DictConfig):
+    # instantiate Wandb Logger
+    wandblogger = WandbLogger(project=cfg.general.project_name, log_model=True, name=cfg.training.job_name)
+    # Log Hyper-parameters to Wandb
+    wandblogger.log_hyperparams(cfg)
+
     # set random seeds so that results are reproducible
     seed_everything(cfg.training.random_seed)
 
@@ -57,6 +57,7 @@ def main(cfg: DictConfig):
     # set up cassava image classification Task
     model = Task(cfg)
 
+    # Set up Callbacks to assist in Training
     cbs = [
         WandbTask(),
         DisableValidationBar(),
@@ -65,18 +66,10 @@ def main(cfg: DictConfig):
         EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"),
     ]
 
-    wandblogger = WandbLogger(
-        project=cfg.general.project_name, log_model=True, name=cfg.training.job_name
-    )
-
-    wandblogger.log_hyperparams(cfg)
-
     checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
 
     # set up trainder kwargs
-    kwds = dict(
-        checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger
-    )
+    kwds = dict(checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger)
 
     trainer = instantiate(cfg.trainer, **kwds)
 
@@ -89,6 +82,7 @@ def main(cfg: DictConfig):
 
     # load in the best model weights
     model = Task.load_from_checkpoint(checkpointPath)
+    
     # create model save dir to save the weights of the
     # vanilla torch-model
     os.makedirs(cfg.general.save_dir, exist_ok=True)
