@@ -1,6 +1,6 @@
 # @package mixmethod
-_target_: MixupWH
+_target_: src.data.mixmethods.MixupWH
 alpha: 0.5
 epochs:
-  - 10
-  - 8
+  - 12
+  - 6
