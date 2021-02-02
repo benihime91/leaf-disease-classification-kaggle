@@ -31,8 +31,11 @@ train:
       config_str: rand-m9-mstd0.5
       hparams:
         interpolation: ${input.interpolation}
-        translate_const: ${eval:"int(${input.input_size}*0.45)"}
-        img_mean: ${eval:"tuple([min(255, round(255 * x)) for x in ${input.mean}])"}
+        translate_const: 230.4
+        img_mean:
+          - 109.61
+          - 126.55
+          - 79.81
 
     - _target_: torchvision.transforms.ToTensor
 

@@ -3,7 +3,7 @@ name: FlatCosScheduler
 params:
   epochs: null
   steps_per_epoch: null
-  pct_start: 0.75
+  pct_start: 0.10
   eta_min: 1e-08
   last_epoch: -1
 monitor: null
