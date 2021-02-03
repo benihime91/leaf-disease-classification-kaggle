@@ -235,12 +235,6 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
     in conf and the full config must be passed in base_config
     """
     if cfg.name in step_schedulers:
-        if cfg.name == "OneCycleLR":
-            cfg.params.max_lr = [
-                float(base_config.training.learning_rate/base_config.training.lr_mult),
-                float(base_config.training.learning_rate)
-                ]
-
         cfg.params.steps_per_epoch = int(steps)
         cfg.params.epochs = int(epochs)
 
@@ -251,9 +245,13 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
         if cfg.name in training_steps:
             cfg.params.num_training_steps = steps * epochs
     
-    params = OmegaConf.to_container(cfg.params, resolve=True)
+    if cfg.name == "OneCycleLR":
+        lrs = [float(base_config.training.learning_rate/base_config.training.lr_mult),
+               float(base_config.training.learning_rate)]
+        lr_scheduler = SCHEDULER_REGISTERY.get(cfg.name)(optimizer=optimizer, max_lr=lrs, **cfg.params)
 
-    lr_scheduler = SCHEDULER_REGISTERY.get(cfg.name)(optimizer=optimizer, **cfg.params)
+    else:
+        lr_scheduler = SCHEDULER_REGISTERY.get(cfg.name)(optimizer=optimizer, **cfg.params)
 
     scheduler = dict(
         scheduler=lr_scheduler,
