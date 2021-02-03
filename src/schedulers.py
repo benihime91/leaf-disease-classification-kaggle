@@ -13,6 +13,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 from src import _logger
+from omegaconf import OmegaConf
 
 # Cell
 SCHEDULER_REGISTERY = registry.Registry("Schedulers")
@@ -236,8 +237,10 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
     if cfg.name in step_schedulers:
         if cfg.name == "OneCycleLR":
             cfg.params.max_lr = [
-                base_config.training.learning_rate/base_config.training.lr_mult,
-                base_config.training.learning_rate]
+                float(base_config.training.learning_rate/base_config.training.lr_mult),
+                float(base_config.training.learning_rate)
+                ]
+
         cfg.params.steps_per_epoch = int(steps)
         cfg.params.epochs = int(epochs)
 
@@ -247,6 +250,8 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
         # for LinearWarmup & PolynomialDecayWarmup
         if cfg.name in training_steps:
             cfg.params.num_training_steps = steps * epochs
+    
+    params = OmegaConf.to_container(cfg.params, resolve=True)
 
     lr_scheduler = SCHEDULER_REGISTERY.get(cfg.name)(optimizer=optimizer, **cfg.params)
 
