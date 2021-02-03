@@ -1,6 +1,9 @@
 # @package scheduler
 name: OneCycleLR
 params:
+  max_lr:
+    - ${training.learning_rate}
+    - ${training.learning_rate}
   pct_start: 0.3
   cycle_momentum: true
   base_momentum: 0.85
