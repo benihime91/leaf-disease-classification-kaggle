@@ -8,13 +8,28 @@ train:
       interpolation: ${input.interpolation}
 
     - _target_: torchvision.transforms.RandomHorizontalFlip
-      p: 0.51
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ColorJitter
+      brightness: 0.1
+      contrast: 0.1
+      saturation: 0.1
+      hue: 0.0
 
     - _target_: torchvision.transforms.ToTensor
 
     - _target_: torchvision.transforms.Normalize
       mean: ${input.mean}
       std: ${input.std}
+
+    - _target_: timm.data.random_erasing.RandomErasing
+      probability: 1.
+      device: cpu
+      max_count: 1
+      mode: rand
 
   after_mix:
     - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
@@ -27,15 +42,11 @@ train:
     - _target_: torchvision.transforms.RandomVerticalFlip
       p: 0.5
 
-    - _target_: timm.data.auto_augment.rand_augment_transform
-      config_str: rand-m9-mstd0.5
-      hparams:
-        interpolation: ${input.interpolation}
-        translate_const: 230.4
-        img_mean:
-          - 109.61
-          - 126.55
-          - 79.81
+    - _target_: torchvision.transforms.ColorJitter
+      brightness: 0.1
+      contrast: 0.1
+      saturation: 0.1
+      hue: 0.0
 
     - _target_: torchvision.transforms.ToTensor
 
@@ -44,7 +55,7 @@ train:
       std: ${input.std}
 
     - _target_: timm.data.random_erasing.RandomErasing
-      probability: 0.2
+      probability: 0.5
       device: cpu
       max_count: 1
       mode: rand

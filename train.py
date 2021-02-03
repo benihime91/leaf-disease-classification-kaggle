@@ -63,8 +63,10 @@ def main(cfg: DictConfig):
         DisableValidationBar(),
         LogInformationCallback(),
         LearningRateMonitor(cfg.scheduler.interval),
-        EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"),
     ]
+
+    if cfg.training.patience is not None:
+        cbs.append(EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"))
 
     checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
 
