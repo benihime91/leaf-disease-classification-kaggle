@@ -148,7 +148,7 @@ class Task(pl.LightningModule):
         ]
 
         optim = create_optimizer(self.hparams.optimizer, params=params)
-        sched = create_scheduler(self.hparams.scheduler, optim, steps, epochs)
+        sched = create_scheduler(self.hparams.scheduler, optim, steps, epochs, base_config=self.hparams)
         return [optim], [sched]
 
     def train_dataloader(self, *args, **kwargs) -> DataLoader:

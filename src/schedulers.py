@@ -228,9 +228,16 @@ warmup_schedulers = [
 training_steps = ["LinearWarmup", "PolynomialDecayWarmup", "CosineWarmup"]
 
 # Cell
-def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: int):
-    "Create a Pytorch-Lightning supported scheduler from cfg. Note: only the `scheduler` config must be passed"
+def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: int, base_config: DictConfig):
+    """
+    Create a Pytorch-Lightning supported scheduler from cfg. Note: only the `scheduler` config must be passed
+    in conf and the full config must be passed in base_config
+    """
     if cfg.name in step_schedulers:
+        if cfg.name == "OneCycleLR":
+            cfg.params.max_lr = [
+                base_config.training.learning_rate/base_config.training.lr_mult,
+                base_config.training.learning_rate]
         cfg.params.steps_per_epoch = steps
         cfg.params.epochs = epochs
 
