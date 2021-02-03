@@ -10,3 +10,4 @@ num_sanity_val_steps: 0
 weights_summary: top
 deterministic: true
 reload_dataloaders_every_epoch: true
+terminate_on_nan: true

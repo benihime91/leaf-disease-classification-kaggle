@@ -2,5 +2,5 @@
 _target_: src.data.mixmethods.MixupWH
 alpha: 0.5
 epochs:
-  - 16
-  - 8
+  - 20
+  - 10
