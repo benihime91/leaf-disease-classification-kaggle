@@ -238,8 +238,8 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
             cfg.params.max_lr = [
                 base_config.training.learning_rate/base_config.training.lr_mult,
                 base_config.training.learning_rate]
-        cfg.params.steps_per_epoch = steps
-        cfg.params.epochs = epochs
+        cfg.params.steps_per_epoch = int(steps)
+        cfg.params.epochs = int(epochs)
 
     elif cfg.name in warmup_schedulers:
         cfg.params.num_warmup_steps = steps * cfg.params.num_warmup_steps
