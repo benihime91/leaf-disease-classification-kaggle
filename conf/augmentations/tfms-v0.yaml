@@ -39,17 +39,17 @@ train:
       saturation: 0.2
       hue: 0.0
 
-    - _target_: timm.data.random_erasing.RandomErasing
-      probability: 1.
-      device: cpu
-      max_count: 1
-      mode: rand
-
     - _target_: torchvision.transforms.ToTensor
 
     - _target_: torchvision.transforms.Normalize
       mean: ${input.mean}
       std: ${input.std}
+
+    - _target_: timm.data.random_erasing.RandomErasing
+      probability: 1.
+      device: cpu
+      max_count: 1
+      mode: rand
 
 valid:
   - _target_: torchvision.transforms.Resize
