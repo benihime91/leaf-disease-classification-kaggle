@@ -25,7 +25,7 @@ def CnnHeadV0(nf, n_out, pool_type="avg", use_conv=False, drop=0.5, **kwargs):
     if drop > 0:
         head = nn.Sequential(nn.Dropout(drop), global_pool, fc)
     else:
-        head = nn.Sequential(*ls)
+        head = nn.Sequential(global_pool, fc)
     return head
 
 # Cell
