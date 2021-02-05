@@ -40,6 +40,8 @@ class Task(pl.LightningModule):
         self.model = Net(self.hparams)
         self.criterion   = instantiate(self.hparams.loss)
         self.mixfunction : BaseMixMethodHandler = instantiate(self.hparams.mixmethod)
+        if self.mixfunction is not None:
+            _logger.info(f"Training with {self.mixfunction}")
 
         self.lrs= None
 
@@ -157,6 +159,7 @@ class Task(pl.LightningModule):
             if self.current_epoch == self.hparams.training.mix_epochs:
                 if self.mixfunction is not None:
                     name = self.mixfunction.__class__.__name__
+                    _logger.info(f"{name} stopped .")
                     self.mixfunction.stop()
 
                 self.train_dset.reload_transforms(self.final_augs)

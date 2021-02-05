@@ -6,7 +6,7 @@ encoder: tf_efficientnet_b3_ns
 learning_rate: 8e-03
 lr_mult: 100
 num_epochs: 15
-mix_epochs: 10
+mix_epochs: null
 batch_size: 32
 accumulate_grad_batches: 1
 patience: null
