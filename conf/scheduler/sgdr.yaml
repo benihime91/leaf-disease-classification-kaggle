@@ -1,8 +1,8 @@
 # @package scheduler
 name: CosineAnnealingWarmRestarts
 params:
-  T_0: 10
+  T_0: 1
   T_mult: 2
 monitor: null
 frequency: 1
-interval: step
+interval: epoch
