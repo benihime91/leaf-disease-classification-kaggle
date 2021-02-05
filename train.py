@@ -62,7 +62,7 @@ def main(cfg: DictConfig):
         WandbTask(),
         DisableValidationBar(),
         LogInformationCallback(),
-        LearningRateMonitor(cfg.scheduler.interval),
+        LearningRateMonitor(logging_interval="step"),
     ]
 
     if cfg.training.patience is not None:
