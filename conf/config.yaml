@@ -5,7 +5,7 @@ hydra:
 defaults:
   - hydra/job_logging: custom
   - general: kaggle
-  - training: effnet-3
+  - training: basic
   - input: 512x512-cassava
   - model: v0
   - data: default

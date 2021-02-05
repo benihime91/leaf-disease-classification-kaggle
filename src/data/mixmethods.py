@@ -140,7 +140,7 @@ class Mixup(BaseMixMethodHandler):
     def _loss(self, outputs, loss_func):
         loss_a = loss_func(outputs, self.target_a)
         loss_b = loss_func(outputs, self.target_b)
-        loss = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+        loss = torch.mean(loss_a*self.lam_a + loss_b*self.lam_b)
         return loss
 
 # Cell
@@ -204,7 +204,7 @@ class Cutmix(BaseMixMethodHandler):
     def _loss(self, outputs, loss_func):
         loss_a = loss_func(outputs, self.target_a)
         loss_b = loss_func(outputs, self.target_b)
-        loss = torch.mean(loss_a * self.lam_a + loss_b * self.lam_b)
+        loss = torch.mean(loss_a*self.lam_a + loss_b*self.lam_b)
         return loss
 
 # Cell
@@ -343,7 +343,7 @@ class Snapmix(BaseMixMethodHandler):
 
 class MixupWH(BaseMixMethodHandler):
     "implementation of `https://arxiv.org/pdf/2101.04342.pdf`"
-    def __init__(self, alpha: float, epochs: list, *args, **kwargs):
+    def __init__(self, alpha: float, epochs: list, total_epochs: int, *args, **kwargs):
         super(MixupWH, self).__init__()  
         store_attr()
         self.device = None
@@ -377,13 +377,13 @@ class MixupWH(BaseMixMethodHandler):
         self.device = ifnone(inputs.device, self.device)
         # mixup-without-hesitation implementation
         if epoch >= self.epochs[0]:
-            threshold = (100 - epoch) / (100 - 90)
+            threshold = (self.total_epochs - epoch) / (self.total_epochs - self.epochs[0])
             if mask < threshold:
                 inputs, targets_a, targets_b = self.mixup_data(inputs, targets)
             else:
                 targets_a, targets_b = targets, targets
                 self.lam = 1.0
-        elif epoch >= self.epochs[0]:
+        elif epoch >= self.epochs[1]:
             if epoch % 2 == 0:
                 inputs, targets_a, targets_b = self.mixup_data(inputs, targets)
             else:
