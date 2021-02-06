@@ -10,7 +10,7 @@ from omegaconf import DictConfig, OmegaConf
 from timm.models.layers import create_classifier
 from torch import nn
 
-from src import _logger
+from src import _logger as logger
 from ..core import *
 from .classifiers import *
 from .layers import *
@@ -34,19 +34,9 @@ class Net(nn.Module):
 
         # build the encoder
         if verbose:
-            _logger.info("Configuration for the current model :")
-            _logger.info(f" feature_extractor: {self.base_conf.name}")
-
-            if self.base_conf.activation is not None:
-                _logger.info(f" activation: {self.base_conf.activation}")
-
-            _logger.info(f" params: {self.base_conf.params}")
-
-            for k, v in self.head_conf.items():
-                if k == "name":
-                    _logger.info(f" head: {str(v)}")
-                else:
-                    _logger.info(f" {k}: {v}")
+            logger.info("Model Configuration for current task :")
+            logger.info(f"FEATURE EXTRACTOR : \n{OmegaConf.to_yaml(self.base_conf, resolve=True)}")
+            logger.info(f"CLASSIFIER : \n{OmegaConf.to_yaml(self.head_conf, resolve=True)}")
 
         # configure activation of the model
         # none default layer or ReLU/SiLU for the model
