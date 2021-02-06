@@ -4,6 +4,7 @@ __all__ = ['BaseMixMethodHandler', 'Mixup', 'Cutmix', 'Snapmix', 'MixupWH']
 
 # Cell
 import random
+from src.models.builder import Net
 
 import numpy as np
 import torch
@@ -232,10 +233,9 @@ class Snapmix(BaseMixMethodHandler):
 
         return x1, y1, x2, y2
 
-    def get_spm(self, inputs, targets, model):
+    def get_spm(self, inputs, targets, model: Net):
         batch_size, C, H, W = inputs.size()
         img_size = (H, W)
-        classifier = model.get_classifier()
 
         with torch.no_grad():
             fms = model.forward_features(inputs)
@@ -246,7 +246,7 @@ class Snapmix(BaseMixMethodHandler):
             weight = weight.view(weight.size(0), weight.size(1), 1, 1)
             bias = clsw.bias.data
 
-            fms = F.relu(fms)
+            fms = model.act_func(fms)
             poolfea = F.adaptive_avg_pool2d(fms, (1, 1)).squeeze()
             clslogit = F.softmax(clsw.forward(poolfea))
 
