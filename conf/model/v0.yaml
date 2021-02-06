@@ -13,4 +13,3 @@ head:
     drop: 0.2
     pool_type: avg
     use_conv: false
-    act_layer: default
