@@ -77,7 +77,7 @@ class CassavaDataset(Dataset):
         if self.backend == "torchvision":
             image = self.transform(image)
         elif self.backend == "albumentations":
-            image = self.transform(image=image)
+            image = self.transform(image=image)["image"]
 
         # returns image-tensors and Optionally target-tensors
         if self.train:
