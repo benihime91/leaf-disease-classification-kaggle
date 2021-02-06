@@ -2,6 +2,7 @@ import albumentations as A
 import torchvision.transforms as T
 from hydra.utils import instantiate
 from omegaconf import DictConfig
+
 from timm.data.auto_augment import (
     augment_and_mix_transform,
     auto_augment_transform,
@@ -13,6 +14,8 @@ from timm.data.constants import (
     IMAGENET_DEFAULT_STD,
 )
 from timm.data.transforms import _pil_interp
+
+from src import _logger
 
 
 def instantiate_transforms(cfg: DictConfig, global_config: DictConfig = None):
@@ -64,6 +67,7 @@ def create_transform(cfg: DictConfig, global_config: DictConfig = None, verbose=
 
     # compose augmentations
     train_augs_initial = compose_func(train_augs_initial)
+    _logger.info(f"Augmentations used in Training :{train_augs_initial}")
     train_augs_final = compose_func(train_augs_final)
     valid_augs = compose_func(valid_augs)
     return train_augs_initial, train_augs_final, valid_augs
