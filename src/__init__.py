@@ -4,5 +4,5 @@ from loguru import logger as _logger
 import sys
 
 _logger.remove()
-format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <cyan>{name:}</cyan>: [<level>{level}</level>] - {message}"
+format = "<level>{level}</level>:<cyan>{name:}</cyan>:{message}"
 _logger.add(sys.stdout, format=format, colorize=True)
