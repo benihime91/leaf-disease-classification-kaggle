@@ -246,7 +246,7 @@ class Snapmix(BaseMixMethodHandler):
             weight = weight.view(weight.size(0), weight.size(1), 1, 1)
             bias = clsw.bias.data
 
-            fms = model.act_func(fms)
+            fms = model.act_func()(fms)
             poolfea = F.adaptive_avg_pool2d(fms, (1, 1)).squeeze()
             clslogit = F.softmax(clsw.forward(poolfea))
 
