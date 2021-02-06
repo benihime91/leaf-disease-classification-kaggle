@@ -4,7 +4,7 @@ random_seed: 42
 fold: 0
 encoder: tf_efficientnet_b3_ns
 learning_rate: 8e-03
-lr_mult: 100
+lr_mult: 10
 num_epochs: 15
 mix_epochs: null
 batch_size: 32

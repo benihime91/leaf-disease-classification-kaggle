@@ -1,7 +1,7 @@
 # @package optimizer
 name: Adam
 params:
-  weight_decay: 1e-06
+  weight_decay: 0
   betas:
     - .9
     - 0.999

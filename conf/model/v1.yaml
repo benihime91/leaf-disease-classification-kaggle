@@ -10,6 +10,10 @@ head:
   name: CnnHeadV1
   params:
     n_out: 5
+    lin_ftrs: null
+    ps: 0.5
     concat_pool: true
-    first_bn: True
+    first_bn: true
+    lin_first: false
+    bn_final: true
     act_layer: default
