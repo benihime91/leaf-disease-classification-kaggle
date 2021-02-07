@@ -147,7 +147,7 @@ class Task(pl.LightningModule):
             {"params": _params[2], "lr":lr2},
         ]
 
-        optim = create_optimizer(self.hparams.optimizer, params=params)
+        optim = create_optimizer(self.hparams.optimizer, params=_params)
         sched = create_scheduler(self.hparams.scheduler, optim, steps, epochs, base_config=self.hparams)
         return [optim], [sched]
 
