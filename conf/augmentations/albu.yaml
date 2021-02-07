@@ -13,8 +13,8 @@ train:
       p: 0.5
 
     - _target_: albumentations.HueSaturationValue
-      hue_shift_limit: 0.2
-      sat_shift_limit: 0.2
+      hue_shift_limit: 0.1
+      sat_shift_limit: 0.1
       val_shift_limit: 0.1
       p: 0.5
 
@@ -52,8 +52,8 @@ train:
       p: 0.5
 
     - _target_: albumentations.RandomBrightnessContrast
-      brightness_limit: 0.1
-      contrast_limit: 0.1
+      brightness_limit: 0.2
+      contrast_limit: 0.2
       p: 0.5
 
     - _target_: albumentations.RandomResizedCrop
