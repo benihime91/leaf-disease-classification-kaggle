@@ -5,9 +5,7 @@ __all__ = ["build_head", "Net"]
 # Cell
 import timm
 import torch
-from fastcore.all import ifnone
 from omegaconf import DictConfig, OmegaConf
-from timm.models.layers import create_classifier
 from torch import nn
 
 from src import _logger as logger
@@ -34,9 +32,7 @@ class Net(nn.Module):
 
         # build the encoder
         if verbose:
-            logger.info("Model Configuration for current task :")
-            logger.info(f"FEATURE EXTRACTOR : \n{OmegaConf.to_yaml(self.base_conf, resolve=True)}")
-            logger.info(f"CLASSIFIER : \n{OmegaConf.to_yaml(self.head_conf, resolve=True)}")
+            logger.info(f"Model Configuration :\n {OmegaConf.to_yaml(cfg.model, resolve=True)}")
 
         # configure activation of the model
         # none default layer or ReLU/SiLU for the model
@@ -83,4 +79,5 @@ class Net(nn.Module):
         return self.head(self.forward_features(x))
 
     def get_param_list(self):
-        return [params(self.encoder), params(self.head)]
+        "splits the parameters of the Model"
+        return [params(self.encoder[:3]), params(self.encoder[3:]), params(self.head)]

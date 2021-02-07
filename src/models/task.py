@@ -3,6 +3,7 @@
 __all__ = ['Task']
 
 # Cell
+import math
 import warnings
 from collections import namedtuple
 from typing import Any, Dict, List, Tuple
@@ -40,10 +41,7 @@ class Task(pl.LightningModule):
         self.model = Net(self.hparams)
         self.criterion   = instantiate(self.hparams.loss)
         self.mixfunction : BaseMixMethodHandler = instantiate(self.hparams.mixmethod)
-        if self.mixfunction is not None:
-            _logger.info(f"Training with {self.mixfunction}")
-
-        self.lrs= None
+        if self.mixfunction is not None: _logger.info(f"Training with {self.mixfunction}")
 
     def setup(self, stage: str):
         "setups datasetMapper"
@@ -133,20 +131,20 @@ class Task(pl.LightningModule):
 
     def configure_optimizers(self) -> Tuple[List[torch.optim.Optimizer], List[Dict]]:
 
-        lrs = (self.hparams.training.learning_rate/self.hparams.training.lr_mult,
-               self.hparams.training.learning_rate)
-
-        lr_tuple = namedtuple("LearningRates", ["base", "head"])
-
-        self.lrs = lr_tuple(lrs[0], lrs[1])
+        # decode optimizers for the parameter groups , currently we are using 3 param groups
+        lr0 = self.hparams.training.learning_rate / self.hparams.training.lr_mult
+        lr1 = self.hparams.training.learning_rate / math.sqrt(self.hparams.training.lr_mult)
+        lr2 = self.hparams.training.learning_rate
 
         epochs  = self.hparams.training.num_epochs
         steps   = len(self.train_dataloader())/ self.hparams.training.accumulate_grad_batches
 
-        total_params = self.model.get_param_list()
+        _params = self.model.get_param_list()
+        
         params = [
-            {"params": total_params[0], "lr":lrs[0]},
-            {"params": total_params[1], "lr":lrs[1]},
+            {"params": _params[0], "lr":lr0},
+            {"params": _params[1], "lr":lr1},
+            {"params": _params[2], "lr":lr2},
         ]
 
         optim = create_optimizer(self.hparams.optimizer, params=params)
