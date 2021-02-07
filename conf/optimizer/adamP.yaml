@@ -1,0 +1,11 @@
+# @package optimizer
+name: AdamP
+params:
+  delta: 0.1
+  wd_ratio: 0.1
+  nesterov: false
+  betas:
+    - .9
+    - 0.999
+  eps: 1e-08
+  weight_decay: 1e-04
