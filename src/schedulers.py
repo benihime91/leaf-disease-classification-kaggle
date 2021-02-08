@@ -246,7 +246,8 @@ def create_scheduler(cfg: DictConfig, optimizer: Optimizer, steps: int, epochs: 
             cfg.params.num_training_steps = steps * epochs
     
     if cfg.name == "OneCycleLR":
-        lrs = [float(base_config.training.learning_rate/base_config.training.lr_mult),
+        lrs = [float(base_config.training.learning_rate / base_config.training.lr_mult),
+               float(base_config.training.learning_rate / math.sqrt(base_config.training.lr_mult)),
                float(base_config.training.learning_rate)]
         lr_scheduler = SCHEDULER_REGISTERY.get(cfg.name)(optimizer=optimizer, max_lr=lrs, **cfg.params)
 
