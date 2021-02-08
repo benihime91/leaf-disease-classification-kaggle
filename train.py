@@ -27,7 +27,11 @@ import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import (
+    EarlyStopping,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
 from pytorch_lightning.loggers import WandbLogger
 
 from src.callbacks import DisableValidationBar, LogInformationCallback, WandbTask
@@ -40,7 +44,9 @@ OmegaConf.register_resolver("eval", lambda x: eval(x))
 
 def main(cfg: DictConfig):
     # instantiate Wandb Logger
-    wandblogger = WandbLogger(project=cfg.general.project_name, log_model=True, name=cfg.training.job_name)
+    wandblogger = WandbLogger(
+        project=cfg.general.project_name, log_model=True, name=cfg.training.job_name
+    )
     # Log Hyper-parameters to Wandb
     wandblogger.log_hyperparams(cfg)
 
@@ -54,9 +60,6 @@ def main(cfg: DictConfig):
     uq_id = cfg.training.unique_idx
     model_name = f"{cfg.training.encoder}-fold={cfg.training.fold}-{uq_id}"
 
-    # set up cassava image classification Task
-    model = Task(cfg)
-
     # Set up Callbacks to assist in Training
     cbs = [
         WandbTask(),
@@ -66,14 +69,23 @@ def main(cfg: DictConfig):
     ]
 
     if cfg.training.patience is not None:
-        cbs.append(EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"))
+        cbs.append(
+            EarlyStopping(
+                monitor="valid/acc", patience=cfg.training.patience, mode="max"
+            )
+        )
 
     checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
 
     # set up trainder kwargs
-    kwds = dict(checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger)
+    kwds = dict(
+        checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger
+    )
 
     trainer = instantiate(cfg.trainer, **kwds)
+
+    # set up cassava image classification Task
+    model = Task(cfg)
 
     trainer.fit(model)
 
@@ -84,7 +96,7 @@ def main(cfg: DictConfig):
 
     # load in the best model weights
     model = Task.load_from_checkpoint(checkpointPath)
-    
+
     # create model save dir to save the weights of the
     # vanilla torch-model
     os.makedirs(cfg.general.save_dir, exist_ok=True)
