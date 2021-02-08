@@ -40,20 +40,21 @@ class DatasetMapper:
         )
 
         # Train Test split for validation and test dataset
-        self.test_data, self.valid_data = train_test_split(
-            self.valid_data,
-            shuffle=True,
-            test_size=0.5,
-            random_state=self.cfg.training.random_seed,
-            stratify=self.valid_data["label"],
-        )
+        # self.test_data, self.valid_data = train_test_split(
+        #     self.valid_data,
+        #     shuffle=True,
+        #     test_size=0.5,
+        #     random_state=self.cfg.training.random_seed,
+        #     stratify=self.valid_data["label"],
+        # )
 
-        self.test_data = self.test_data.sample(frac=1).reset_index(
-            inplace=False, drop=True
-        )
-        self.valid_data = self.valid_data.sample(frac=1).reset_index(
-            inplace=False, drop=True
-        )
+        # self.test_data = self.test_data.sample(frac=1).reset_index(
+        #     inplace=False, drop=True
+        # )
+        # self.valid_data = self.valid_data.sample(frac=1).reset_index(
+        #     inplace=False, drop=True
+        # )
+        self.test_data = self.valid_data
 
         # Loads transformations from the HYDRA config file
         self.augs_initial, self.augs_final, self.augs_valid = create_transform(
