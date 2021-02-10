@@ -79,11 +79,15 @@ class Net(nn.Module):
         # make all layers trainable
         self.encoder.requires_grad_(True)
         self.encoder.train()
-        self.head.requires_grad_(True)
-        self.head.train()
+        
         # freeze the batchnorm layers of the encoder
         if self.default_conf.training.bn_freeze:
             set_bn_eval(self.encoder)
+
+        # make the custom head trainable
+        for param in self.head.parameters():
+            param.requires_grad = True
+        self.head.train()
 
     def _init_head(self):
         "initializes the weights of the head of the model"
