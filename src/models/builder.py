@@ -21,63 +21,102 @@ def build_head(cfg: DictConfig, nf, verbose=False):
     return head
 
 
+bn_types = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)
+
+# From : https://github.com/fastai/fastai/blob/66a03da8a11cd85188f4c6f063b98c4a209492e8/fastai/callback/training.py#L43
+def set_bn_eval(m: nn.Module, use_eval=True) -> None:
+    "Set bn layers in eval mode for all recursive children of `m`."
+    for l in m.children():
+        if isinstance(l, bn_types) and not next(l.parameters()).requires_grad:
+            if use_eval:
+                l.eval()
+            else:
+                l.train()
+        set_bn_eval(l)
+
+
 # Cell
 class Net(nn.Module):
     "Creates a model using the Global Config"
 
     def __init__(self, cfg: DictConfig, verbose=True):
         super(Net, self).__init__()
+        self.default_conf = cfg
         self.base_conf = cfg.model.base_model
         self.head_conf = cfg.model.head
 
         # build the encoder
         if verbose:
-            logger.info(f"Model Configuration :\n {OmegaConf.to_yaml(cfg.model, resolve=True)}")
+            # configuration for the Whole Model
+            m_conf = OmegaConf.to_yaml(cfg.model, resolve=True)
+            # Log configuration for the Model
+            logger.info(f"Configuration for current model:\n {m_conf}")
 
         # configure activation of the model
-        # none default layer or ReLU/SiLU for the model
+        # none for default layer or ReLU/SiLU for the model
         if self.base_conf.activation is not None:
             self.act = ACTIVATIONS[self.base_conf.activation]
         else:
             self.act = None
 
         # build encoder
-        self.encoder = timm.create_model(self.base_conf.name, act_layer=self.act, **self.base_conf.params)
+        self.encoder = timm.create_model(
+            model_name=self.base_conf.name,
+            in_chans=3,
+            act_layer=self.act,
+            **self.base_conf.params,
+        )
         self.encoder = cut_model(self.encoder, -2)
         # build the head of the model
         nf = num_features_model(self.encoder)
         self.head = build_head(self.head_conf, nf, verbose)
 
-    def act_func(self):
-        if self.act is not None:
-            return self.act(inplace=True)
-        else:
-            if "efficientnet" in str(self.base_conf.name):
-                return nn.SiLU(inplace=True)
-            else:
-                return nn.ReLU(inplace=True)
+        self._make_trainable()
+        self._init_head()
 
-    def init_classifier(self):
-        if self.clf_conf.act_layer == "default":
-            apply_init(self.classifier, torch.nn.init.kaiming_normal_)
+    def _make_trainable(self):
+        "make all the layers trainable and optinally freeze the BN layers of the encoder"
+        # make all layers trainable
+        self.encoder.requires_grad_(True)
+        self.encoder.train()
+        self.head.requires_grad_(True)
+        self.head.train()
+        # freeze the batchnorm layers of the encoder
+        if self.default_conf.training.bn_freeze:
+            set_bn_eval(self.encoder)
+
+    def _init_head(self):
+        "initializes the weights of the head of the model"
+        if self.head_conf.params.act_layer == "default":
+            apply_init(self.head, torch.nn.init.kaiming_normal_)
+        elif self.head_conf.name == "CnnHeadV0":
+            apply_init(self.head, torch.nn.init.kaiming_normal_)
         else:
-            apply_init(self.classifier, torch.nn.init.kaiming_uniform_)
+            apply_init(self.head, torch.nn.init.kaiming_uniform_)
 
     def get_head(self):
+        "returns the head of the model"
         return self.head
 
     def get_classifier(self):
+        "returns the classification layer (final layer) of the head"
         try:
             return self.head[-1]
         except:
             return self.head.fc2
 
     def forward_features(self, x: torch.Tensor):
+        "generates the feature maps from the encoder"
         return self.encoder(x)
 
     def forward(self, x: torch.Tensor):
+        "forward for the model feature_extraction -> generate logits"
         return self.head(self.forward_features(x))
 
     def get_param_list(self):
         "splits the parameters of the Model"
-        return [params(self.encoder[:3]), params(self.encoder[3:]), params(self.head)]
+        return [
+            trainable_params(self.encoder[:3]),
+            trainable_params(self.encoder[3:]),
+            trainable_params(self.head),
+        ]

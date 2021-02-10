@@ -10,4 +10,5 @@ mix_epochs: null
 batch_size: 32
 accumulate_grad_batches: 1
 patience: null
+bn_freeze: false
 job_name: ${hydra:job.name}
