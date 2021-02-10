@@ -16,7 +16,7 @@ from .utils import apply_init, cut_model, num_features_model
 
 # Cell
 def build_head(cfg: DictConfig, nf, verbose=False):
-    "builds a classifier for model with output `nf`"
+    "builds a classifier for model with output `nf` and `cfg`"
     head = CLASSIFIER_REGISTERY.get(cfg.name)(nf=nf, **cfg.params)
     return head
 
@@ -54,30 +54,26 @@ class Net(nn.Module):
 
         # configure activation of the model
         # none for default layer or ReLU/SiLU for the model
-        if self.base_conf.activation is not None:
-            self.act = ACTIVATIONS[self.base_conf.activation]
-        else:
-            self.act = None
+        if self.base_conf.activation is not None: self.act = ACTIVATIONS[self.base_conf.activation]
+        else                                    : self.act = None
 
         # build encoder
-        self.encoder = timm.create_model(
-            model_name=self.base_conf.name,
-            in_chans=3,
-            act_layer=self.act,
-            **self.base_conf.params,
-        )
+        self.encoder = timm.create_model(self.base_conf.name, act_layer=self.act, **self.base_conf.params)
         self.encoder = cut_model(self.encoder, -2)
+        
         # build the head of the model
         nf = num_features_model(self.encoder)
         self.head = build_head(self.head_conf, nf, verbose)
 
+        # batch_norm layers + initialize the `head`
         self._make_trainable()
         self._init_head()
 
     def _make_trainable(self):
         "make all the layers trainable and optinally freeze the BN layers of the encoder"
         # make all layers trainable
-        self.encoder.requires_grad_(True)
+        for param in self.encoder.parameters():
+            param.requires_grad = True
         self.encoder.train()
         
         # freeze the batchnorm layers of the encoder
@@ -104,10 +100,8 @@ class Net(nn.Module):
 
     def get_classifier(self):
         "returns the classification layer (final layer) of the head"
-        try:
-            return self.head[-1]
-        except:
-            return self.head.fc2
+        try   : return self.head[-1]
+        except: return self.head.fc2
 
     def forward_features(self, x: torch.Tensor):
         "generates the feature maps from the encoder"
@@ -119,8 +113,4 @@ class Net(nn.Module):
 
     def get_param_list(self):
         "splits the parameters of the Model"
-        return [
-            trainable_params(self.encoder[:3]),
-            trainable_params(self.encoder[3:]),
-            trainable_params(self.head),
-        ]
+        return [trainable_params(self.encoder[:3]), trainable_params(self.encoder[3:]), params(self.head)]
