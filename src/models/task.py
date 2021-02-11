@@ -133,8 +133,7 @@ class Task(pl.LightningModule):
 
         # decode optimizers for the parameter groups , currently we are using 3 param groups
         lr0 = self.hparams.training.learning_rate / self.hparams.training.lr_mult
-        lr1 = self.hparams.training.learning_rate / math.sqrt(self.hparams.training.lr_mult)
-        lr2 = self.hparams.training.learning_rate
+        lr1 = self.hparams.training.learning_rate
 
         epochs  = self.hparams.training.num_epochs
         steps   = len(self.train_dataloader())/ self.hparams.training.accumulate_grad_batches
@@ -143,9 +142,7 @@ class Task(pl.LightningModule):
         
         params = [
             {"params": _params[0], "lr":lr0},
-            {"params": _params[1], "lr":lr1},
-            {"params": _params[2], "lr":lr2},
-        ]
+            {"params": _params[1], "lr":lr1}]
 
         optim = create_optimizer(self.hparams.optimizer, params=params)
         sched = create_scheduler(self.hparams.scheduler, optim, steps, epochs, base_config=self.hparams)

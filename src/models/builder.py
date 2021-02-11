@@ -113,4 +113,4 @@ class Net(nn.Module):
 
     def get_param_list(self):
         "splits the parameters of the Model"
-        return [trainable_params(self.encoder[:3]), trainable_params(self.encoder[3:]), params(self.head)]
+        return [trainable_params(self.encoder), params(self.head)]
