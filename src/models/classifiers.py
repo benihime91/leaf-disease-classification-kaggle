@@ -71,33 +71,33 @@ def CnnHeadV1(
     return nn.Sequential(*layers)
 
 
-# Cell
-@CLASSIFIER_REGISTERY.register()
-class CnnHeadV2(nn.Module):
-    def __init__(self, nf, n_out, dropout=0.5, act_layer="mish", **kwargs):
-        super().__init__()
-        self.dropout = dropout
-        self.act1 = ACTIVATIONS[act_layer](inplace=True)
-        self.conv = nn.Conv2d(nf, nf, 1, 1)
-        self.norm = nn.BatchNorm2d(nf)
-        self.pool = GeM()
+# # Cell
+# @CLASSIFIER_REGISTERY.register()
+# class CnnHeadV2(nn.Module):
+#     def __init__(self, nf, n_out, dropout=0.5, act_layer="mish", **kwargs):
+#         super().__init__()
+#         self.dropout = dropout
+#         self.act1 = ACTIVATIONS[act_layer](inplace=True)
+#         self.conv = nn.Conv2d(nf, nf, 1, 1)
+#         self.norm = nn.BatchNorm2d(nf)
+#         self.pool = GeM()
 
-        self.fc1 = nn.Linear(nf, nf // 2)
-        self.act2 = ACTIVATIONS[act_layer](inplace=True)
-        self.rms_norm = RMSNorm(nf // 2)
-        self.fc2 = nn.Linear(nf // 2, n_out)
+#         self.fc1 = nn.Linear(nf, nf // 2)
+#         self.act2 = ACTIVATIONS[act_layer](inplace=True)
+#         self.rms_norm = RMSNorm(nf // 2)
+#         self.fc2 = nn.Linear(nf // 2, n_out)
 
-    def forward(self, x):
-        x = self.act1(x)
-        x = self.conv(x)
-        x = self.norm(x)
-        x = self.pool(x)
-        x = x.view(x.size(0), -1)
-        x = F.dropout(x, p=self.dropout)
-        x = self.fc1(x)
+#     def forward(self, x):
+#         x = self.act1(x)
+#         x = self.conv(x)
+#         x = self.norm(x)
+#         x = self.pool(x)
+#         x = x.view(x.size(0), -1)
+#         x = F.dropout(x, p=self.dropout)
+#         x = self.fc1(x)
 
-        x = self.act2(x)
-        x = self.rms_norm(x)
-        x = F.dropout(x, p=self.dropout / 2)
-        x = self.fc2(x)
-        return x
+#         x = self.act2(x)
+#         x = self.rms_norm(x)
+#         x = F.dropout(x, p=self.dropout / 2)
+#         x = self.fc2(x)
+#         return x

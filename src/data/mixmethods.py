@@ -23,7 +23,7 @@ class BaseMixMethodHandler:
     _has_ended = False
     device = None
 
-    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, num_iters: int = None):
+    def __init__(self, alpha: float = 0.5, conf_prob: float = 1.0, num_iters: int = None, **kwargs):
         store_attr()
         if self.alpha > 0.0:
             self.distrib = np.random.beta(self.alpha, self.alpha)

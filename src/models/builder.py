@@ -41,7 +41,7 @@ class Net(nn.Module):
 
     def __init__(self, cfg: DictConfig, verbose=True):
         super(Net, self).__init__()
-        self.default_conf = cfg
+        self.global_conf = cfg
         self.base_conf = cfg.model.base_model
         self.head_conf = cfg.model.head
 
@@ -54,12 +54,17 @@ class Net(nn.Module):
 
         # configure activation of the model
         # none for default layer or ReLU/SiLU for the model
-        if self.base_conf.activation is not None: self.act = ACTIVATIONS[self.base_conf.activation]
-        else                                    : self.act = None
+        if self.base_conf.activation is not None: 
+            self.act = ACTIVATIONS[self.base_conf.activation]
+        else : 
+            self.act = None
 
         # build encoder
         self.encoder = timm.create_model(self.base_conf.name, act_layer=self.act, **self.base_conf.params)
         self.encoder = cut_model(self.encoder, -2)
+        # use AdaptiveConcatPool2d is concat pool is true
+        if self.base_conf.concat_pool:
+            self.encoder = nn.Sequential(self.encoder, AdaptiveConcatPool2d(2))
         
         # build the head of the model
         nf = num_features_model(self.encoder)
@@ -77,7 +82,7 @@ class Net(nn.Module):
         self.encoder.train()
         
         # freeze the batchnorm layers of the encoder
-        if self.default_conf.training.bn_freeze:
+        if self.global_conf.training.bn_freeze:
             set_bn_eval(self.encoder)
 
         # make the custom head trainable

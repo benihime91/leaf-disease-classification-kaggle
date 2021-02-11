@@ -2,6 +2,7 @@
 base_model:
   name: ${training.encoder}
   activation: null
+  concat_pool: false
   params:
     pretrained: true
     drop_path_rate: 0.2
@@ -13,3 +14,4 @@ head:
     drop: 0.2
     pool_type: avg
     use_conv: false
+    act_layer: null
