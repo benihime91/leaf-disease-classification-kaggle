@@ -16,8 +16,8 @@ OmegaConf.register_resolver("eval", lambda x: eval(x))
 
 def main(cfg: DictConfig):
     _ = seed_everything(cfg.training.random_seed)
-    task = Task(cfg)
     trainer = instantiate(cfg.trainer)
+    task = Task(cfg)
     # Run learning rate finder
     lr_finder = trainer.tuner.lr_find(task)
 
