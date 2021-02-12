@@ -5,4 +5,4 @@ import sys
 
 _logger.remove()
 format = "<level>{level}</level>:<cyan>{name:}</cyan>:{message}"
-_logger.add(sys.stdout, format=format, colorize=True)
+_logger.add(sys.stdout, format=format, colorize=True, level="WARNING")
