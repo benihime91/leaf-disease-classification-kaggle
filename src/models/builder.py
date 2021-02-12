@@ -65,14 +65,14 @@ class Net(nn.Module):
         
         # build the head of the model
         nf = num_features_model(self.encoder)
-        self.head = build_head(self.head_conf, nf, verbose)
+        self.head = build_head(self.head_conf, nf)
 
         # batch_norm layers + initialize the `head`
         self._make_trainable()
         self._init_head()
 
         # set pool layer as class attribute
-        self.pool_layer = AdaptiveConcatPool2d() if self.head_conf.params.concat_pool else nn.AdaptiveAvgPool2d(1)
+        self.pool_layer = AdaptiveConcatPool2d((1,1)) if self.head_conf.params.concat_pool else nn.AdaptiveAvgPool2d((1,1))
 
     def _make_trainable(self):
         "make all the layers trainable and optinally freeze the BN layers of the encoder"
