@@ -27,14 +27,20 @@ class LabelSmoothingCrossEntropy(_WeightedLoss):
     def __init__(self, eps: float = 0.1, reduction="mean", weight=None):
         super().__init__(weight=weight, reduction=reduction)
         self.eps = eps
+        self.weight=weight
+        self.reduction=reduction
 
-    def forward(self, x, target):
-        logprobs = F.log_softmax(x, dim=-1)
-        nll_loss = -logprobs.gather(dim=-1, index=target.unsqueeze(1))
-        nll_loss = nll_loss.squeeze(1)
-        smooth_loss = -logprobs.mean(dim=-1)
-        loss = (1 - self.eps) * nll_loss + self.eps * smooth_loss
-        return loss.mean()
+    def forward(self, output, target):
+        c = output.size()[1]
+        log_preds = F.log_softmax(output, dim=1)
+        if self.reduction=='sum': 
+            loss = -log_preds.sum()
+        else:
+            loss = -log_preds.sum(dim=1)
+            if self.reduction=='mean':  
+                loss = loss.mean()
+        loss = loss*self.eps/c + (1-self.eps) * F.nll_loss(log_preds, target.long(), weight=self.weight, reduction=self.reduction)
+        return loss
 
 # Cell
 ###########################################################################
