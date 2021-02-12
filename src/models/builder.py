@@ -74,6 +74,9 @@ class Net(nn.Module):
         self._make_trainable()
         self._init_head()
 
+        # set pool layer as class attribute
+        self.pool_layer = AdaptiveConcatPool2d() if self.head_conf.params.concat_pool else nn.AdaptiveAvgPool2d(1)
+
     def _make_trainable(self):
         "make all the layers trainable and optinally freeze the BN layers of the encoder"
         # make all layers trainable

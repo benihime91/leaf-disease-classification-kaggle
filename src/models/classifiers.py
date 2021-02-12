@@ -3,15 +3,11 @@
 __all__ = ["CLASSIFIER_REGISTERY", "CnnHeadV0", "CnnHeadV1", "CnnHeadV2"]
 
 # Cell
-import torch
 import torch.nn.functional as F
-from fastcore.all import L, delegates, ifnone
+from fastcore.all import L
 from fvcore.common import registry
-from timm.models.layers import create_classifier
 from torch import nn
-from torch.nn import Module
 
-from src import _logger
 from .layers import *
 from .utils import *
 
@@ -19,9 +15,13 @@ CLASSIFIER_REGISTERY = registry.Registry("Classifiers")
 
 # Cell
 @CLASSIFIER_REGISTERY.register()
-def CnnHeadV0(nf, n_out, pool_type="avg", use_conv=False, drop=0.5, **kwargs):
+def CnnHeadV0(nf, n_out, concat_pool=True, use_conv=False, drop=0.5, **kwargs):
     "create a classifier from timm lib"
-    global_pool, fc = create_classifier(nf, n_out, pool_type, use_conv)
+    pool = AdaptiveConcatPool2d() if concat_pool else nn.AdaptiveAvgPool2d(1)
+    global_pool = nn.Sequential(pool, nn.Flatten())
+    if concat_pool:
+        nf *= 2
+    fc = nn.Linear(nf, n_out, bias=True)
     if drop > 0:
         head = nn.Sequential(nn.Dropout(drop), global_pool, fc)
     else:
@@ -31,18 +31,8 @@ def CnnHeadV0(nf, n_out, pool_type="avg", use_conv=False, drop=0.5, **kwargs):
 
 # Cell
 @CLASSIFIER_REGISTERY.register()
-def CnnHeadV1(
-    nf,
-    n_out,
-    lin_ftrs=None,
-    ps=0.5,
-    concat_pool=True,
-    first_bn=True,
-    lin_first=False,
-    act_layer="default",
-    bn_final=False,
-    **kwargs,
-):
+def CnnHeadV1(nf, n_out, lin_ftrs=None, ps=0.5, concat_pool=True, first_bn=True, lin_first=False,
+              act_layer="default", bn_final=False, **kwargs,):
     "Model head that takes `nf` features, runs through `lin_ftrs`, and out `n_out` classes."
     if concat_pool:
         nf *= 2
