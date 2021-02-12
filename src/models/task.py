@@ -15,7 +15,6 @@ from omegaconf import DictConfig
 from pytorch_lightning.metrics import Accuracy
 from src import _logger
 
-from src.data.mixmethods import BaseMixMethodHandler
 from torch.utils.data import DataLoader
 
 from ..data import DatasetMapper
@@ -40,7 +39,7 @@ class Task(pl.LightningModule):
         # instantiate objects
         self.model = Net(self.hparams)
         self.criterion   = instantiate(self.hparams.loss)
-        self.mixfunction : BaseMixMethodHandler = instantiate(self.hparams.mixmethod)
+        self.mixfunction = instantiate(self.hparams.mixmethod)
         if self.mixfunction is not None: _logger.info(f"Training with {self.mixfunction}")
 
     def setup(self, stage: str):
