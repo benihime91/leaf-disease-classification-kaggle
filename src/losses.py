@@ -16,7 +16,9 @@ __all__ = [
 # Cell
 import torch
 import torch.nn.functional as F
+from torch.nn import CrossEntropyLoss
 from torch.nn.modules.loss import _WeightedLoss
+
 
 # Cell
 class LabelSmoothingCrossEntropy(_WeightedLoss):
@@ -24,7 +26,6 @@ class LabelSmoothingCrossEntropy(_WeightedLoss):
 
     def __init__(self, eps: float = 0.1, reduction="mean", weight=None):
         super().__init__(weight=weight, reduction=reduction)
-        assert eps < 1.0
         self.eps = eps
 
     def forward(self, x, target):
@@ -178,13 +179,17 @@ class TaylorSoftmax(torch.nn.Module):
 
 
 class TaylorCrossEntropyLoss(_WeightedLoss):
-    def __init__(self, n=2, reduction="mean", eps: float = 0.2):
+    def __init__(self, n=2, reduction="mean", eps: float = 0.1):
         super(TaylorCrossEntropyLoss, self).__init__(reduction=reduction)
         assert n % 2 == 0
         self.taylor_softmax = TaylorSoftmax(dim=1, n=n)
-        self.label_smoothing_loss = LabelSmoothingCrossEntropy(eps=eps, reduction=self.reduction)
+
+        if eps > 0.:
+            self.lf = LabelSmoothingCrossEntropy(eps=eps, reduction=self.reduction)
+        else:
+            self.lf = CrossEntropyLoss(reduction=reduction)
 
     def forward(self, output, target):
         log_probs = self.taylor_softmax(output).log()
-        loss = self.label_smoothing_loss(log_probs, target)
+        loss = self.lf(log_probs, target)
         return loss
