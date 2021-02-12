@@ -1,0 +1,48 @@
+# @package augmentations
+backend: torchvision
+
+train:
+  before_mix:
+    - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
+      size: ${input.input_size}
+      interpolation: ${input.interpolation}
+
+    - _target_: torchvision.transforms.RandomHorizontalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ToTensor
+
+    - _target_: torchvision.transforms.Normalize
+      mean: ${input.mean}
+      std: ${input.std}
+
+  after_mix:
+    - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
+      size: ${input.input_size}
+      interpolation: ${input.interpolation}
+
+    - _target_: torchvision.transforms.RandomHorizontalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ToTensor
+
+    - _target_: torchvision.transforms.Normalize
+      mean: ${input.mean}
+      std: ${input.std}
+
+valid:
+  - _target_: torchvision.transforms.Resize
+    size: ${input.input_size}
+    interpolation: 3
+
+  - _target_: torchvision.transforms.ToTensor
+
+  - _target_: torchvision.transforms.Normalize
+    mean: ${input.mean}
+    std: ${input.std}
