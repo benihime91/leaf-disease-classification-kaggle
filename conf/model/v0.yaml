@@ -1,4 +1,5 @@
 # @package model
+# model for Snapmix
 base_model:
   name: ${training.encoder}
   activation: null
@@ -11,5 +12,5 @@ head:
   params:
     n_out: 5
     drop: 0.3
-    concat_pool: false
+    concat_pool: false # NOTE: concat pool doesn't work with SnapMix, yet
     act_layer: null
