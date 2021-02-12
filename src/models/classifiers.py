@@ -17,15 +17,12 @@ CLASSIFIER_REGISTERY = registry.Registry("Classifiers")
 @CLASSIFIER_REGISTERY.register()
 def CnnHeadV0(nf, n_out, concat_pool=True, use_conv=False, drop=0.5, **kwargs):
     "create a classifier from timm lib"
-    pool = AdaptiveConcatPool2d() if concat_pool else nn.AdaptiveAvgPool2d(1)
+    pool = AdaptiveConcatPool2d((1,1)) if concat_pool else nn.AdaptiveAvgPool2d((1,1))
     global_pool = nn.Sequential(pool, nn.Flatten())
-    if concat_pool:
-        nf *= 2
+    if concat_pool: nf *= 2
     fc = nn.Linear(nf, n_out, bias=True)
-    if drop > 0:
-        head = nn.Sequential(nn.Dropout(drop), global_pool, fc)
-    else:
-        head = nn.Sequential(global_pool, fc)
+    if drop > 0.: head = nn.Sequential(nn.Dropout(drop), global_pool, fc)
+    else        : head = nn.Sequential(global_pool, fc)
     return head
 
 

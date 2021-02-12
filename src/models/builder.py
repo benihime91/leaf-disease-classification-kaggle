@@ -15,7 +15,7 @@ from .layers import *
 from .utils import apply_init, cut_model, num_features_model
 
 # Cell
-def build_head(cfg: DictConfig, nf, verbose=False):
+def build_head(cfg: DictConfig, nf):
     "builds a classifier for model with output `nf` and `cfg`"
     head = CLASSIFIER_REGISTERY.get(cfg.name)(nf=nf, **cfg.params)
     return head
@@ -62,9 +62,6 @@ class Net(nn.Module):
         # build encoder
         self.encoder = timm.create_model(self.base_conf.name, act_layer=self.act, **self.base_conf.params)
         self.encoder = cut_model(self.encoder, -2)
-        # use AdaptiveConcatPool2d is concat pool is true
-        if self.base_conf.concat_pool:
-            self.encoder = nn.Sequential(self.encoder, AdaptiveConcatPool2d(2))
         
         # build the head of the model
         nf = num_features_model(self.encoder)
