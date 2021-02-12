@@ -2,7 +2,7 @@
 backend: albumentations
 train:
   before_mix:
-    - _target_: albumentations.RandomResizedCrop
+    - _target_: albumentations.Resize
       height: ${input.input_size}
       width: ${input.input_size}
       p: 1.0
