@@ -4,7 +4,7 @@ base_model:
   activation: null
   params:
     pretrained: true
-    drop_path_rate: 0.2
+    drop_path_rate: 0.30
 
 head:
   name: CnnHeadV1
@@ -15,5 +15,5 @@ head:
     concat_pool: true
     first_bn: true
     lin_first: false
-    bn_final: true
+    bn_final: false
     act_layer: default

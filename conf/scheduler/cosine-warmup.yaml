@@ -2,7 +2,7 @@
 name: CosineWarmup
 params:
   num_training_steps: null
-  num_warmup_steps: 1
+  num_warmup_steps: 4
   num_cycles: 0.5
   last_epoch: -1
 monitor: null
