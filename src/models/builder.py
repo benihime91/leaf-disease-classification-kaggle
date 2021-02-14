@@ -23,17 +23,14 @@ def build_head(cfg: DictConfig, nf):
 
 bn_types = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)
 
-# From : https://github.com/fastai/fastai/blob/66a03da8a11cd85188f4c6f063b98c4a209492e8/fastai/callback/training.py#L43
-def set_bn_eval(m: nn.Module, use_eval=True) -> None:
+def set_bn_eval(m:nn.Module)->None:
     "Set bn layers in eval mode for all recursive children of `m`."
     for l in m.children():
         if isinstance(l, bn_types) and not next(l.parameters()).requires_grad:
-            if use_eval:
-                l.eval()
-            else:
-                l.train()
+            l.eval()
+            for param in l.parameters(): 
+                param.requires_grad = False
         set_bn_eval(l)
-
 
 # Cell
 class Net(nn.Module):

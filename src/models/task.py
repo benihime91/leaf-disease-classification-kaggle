@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from ..data import DatasetMapper
 from ..optimizers import create_optimizer
 from ..schedulers import create_scheduler
-from .builder import Net, set_bn_eval
+from .builder import Net
 
 warnings.filterwarnings("ignore")
 
@@ -42,10 +42,6 @@ class Task(pl.LightningModule):
         self.mixfunction = instantiate(self.hparams.mixmethod)
         if self.mixfunction is not None: _logger.info(f"Training with {self.mixfunction}")
 
-        # manually set all the bnorm layers to be eval
-        if self.hparams.training.bn_freeze:
-            set_bn_eval(self.model.encoder)
-
     def setup(self, stage: str):
         "setups datasetMapper"
         mapper = DatasetMapper(self.hparams)
@@ -64,12 +60,7 @@ class Task(pl.LightningModule):
         return self.model(x)
 
     def training_step(self, batch: Any, batch_idx: int) -> Any:
-        "The Training Step: This is where the Magic Happens !!!"
-
-        # manually set all the bnorm layers to be eval
-        if self.hparams.training.bn_freeze:
-            set_bn_eval(self.model.encoder)
-        
+        "The Training Step: This is where the Magic Happens !!!"        
         imgs, targs = batch
         self.preds, self.labels = None, None
         # store for usage later
