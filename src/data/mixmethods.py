@@ -247,9 +247,7 @@ class Snapmix(BaseMixMethodHandler):
             bias = clsw.bias.data
 
             fms = F.relu(fms)
-
-            # use the pool layer of the model instead of hard coding `nn.AdaptiveAvgPool2d`
-            poolfea = self.model.pool_layer(fms).squeeze()
+            poolfea = F.adaptive_avg_pool2d(fms,(1,1)).squeeze()
             clslogit = F.softmax(clsw.forward(poolfea))
 
             logitlist = []

@@ -42,8 +42,8 @@ class Net(nn.Module):
     def __init__(self, cfg: DictConfig, verbose=True):
         super(Net, self).__init__()
         self.global_conf = cfg
-        self.base_conf = cfg.model.base_model
-        self.head_conf = cfg.model.head
+        self.base_conf   = cfg.model.base_model
+        self.head_conf   = cfg.model.head
 
         # build the encoder
         if verbose:
@@ -71,12 +71,9 @@ class Net(nn.Module):
         self._make_trainable()
         self._init_head()
 
-        # set pool layer as class attribute
-        self.pool_layer = AdaptiveConcatPool2d((1,1)) if self.head_conf.params.concat_pool else nn.AdaptiveAvgPool2d((1,1))
-
     def _make_trainable(self):
         "make all the layers trainable and optinally freeze the BN layers of the encoder"
-        # make all layers trainable
+        # make all layers trainable in encoder
         for param in self.encoder.parameters():
             param.requires_grad = True
         self.encoder.train()
@@ -99,14 +96,9 @@ class Net(nn.Module):
         else:
             apply_init(self.head, torch.nn.init.kaiming_uniform_)
 
-    def get_head(self):
-        "returns the head of the model"
-        return self.head
-
     def get_classifier(self):
         "returns the classification layer (final layer) of the head"
-        try   : return self.head[-1]
-        except: return self.head.fc2
+        return self.head[-1]
 
     def forward_features(self, x: torch.Tensor):
         "generates the feature maps from the encoder"

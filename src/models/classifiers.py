@@ -16,20 +16,20 @@ CLASSIFIER_REGISTERY = registry.Registry("Classifiers")
 # Cell
 @CLASSIFIER_REGISTERY.register()
 def CnnHeadV0(nf, n_out, concat_pool=True, use_conv=False, drop=0.5, **kwargs):
-    "create a classifier from timm lib"
+    "create a classifier similat to from timm lib"
     pool = AdaptiveConcatPool2d((1,1)) if concat_pool else nn.AdaptiveAvgPool2d((1,1))
     global_pool = nn.Sequential(pool, nn.Flatten())
     if concat_pool: nf *= 2
     fc = nn.Linear(nf, n_out, bias=True)
-    if drop > 0.: head = nn.Sequential(nn.Dropout(drop), global_pool, fc)
+    if drop > 0.: head = nn.Sequential(global_pool, nn.Dropout(drop), fc)
     else        : head = nn.Sequential(global_pool, fc)
     return head
 
 
 # Cell
 @CLASSIFIER_REGISTERY.register()
-def CnnHeadV1(nf, n_out, lin_ftrs=None, ps=0.5, concat_pool=True, first_bn=True, lin_first=False,
-              act_layer="default", bn_final=False, **kwargs,):
+def CnnHeadV1(nf, n_out, lin_ftrs=None, ps=0.5, concat_pool=True, first_bn=True, 
+              lin_first=False, act_layer="default", bn_final=False, **kwargs,):
     "Model head that takes `nf` features, runs through `lin_ftrs`, and out `n_out` classes."
     if concat_pool:
         nf *= 2
