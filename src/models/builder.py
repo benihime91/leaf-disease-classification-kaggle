@@ -71,6 +71,8 @@ class Net(nn.Module):
         self._make_trainable()
         self._init_head()
 
+        self.p_list = [trainable_params(self.encoder), params(self.head)]
+
     def _make_trainable(self):
         "make all the layers trainable and optinally freeze the BN layers of the encoder"
         # make all layers trainable in encoder
@@ -110,4 +112,4 @@ class Net(nn.Module):
 
     def get_param_list(self):
         "splits the parameters of the Model"
-        return [trainable_params(self.encoder), params(self.head)]
+        return self.p_list
