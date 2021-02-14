@@ -44,9 +44,7 @@ OmegaConf.register_resolver("eval", lambda x: eval(x))
 
 def main(cfg: DictConfig):
     # instantiate Wandb Logger
-    wandblogger = WandbLogger(
-        project=cfg.general.project_name, log_model=True, name=cfg.training.job_name
-    )
+    wandblogger = WandbLogger(project=cfg.general.project_name, log_model=True, name=cfg.training.job_name)
     # Log Hyper-parameters to Wandb
     wandblogger.log_hyperparams(cfg)
 
@@ -69,18 +67,11 @@ def main(cfg: DictConfig):
     ]
 
     if cfg.training.patience is not None:
-        cbs.append(
-            EarlyStopping(
-                monitor="valid/acc", patience=cfg.training.patience, mode="max"
-            )
-        )
+        cbs.append(EarlyStopping(monitor="valid/acc", patience=cfg.training.patience, mode="max"))
 
     checkpointCallback = ModelCheckpoint(monitor="valid/acc", save_top_k=1, mode="max",)
-
     # set up trainder kwargs
-    kwds = dict(
-        checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger
-    )
+    kwds = dict(checkpoint_callback=checkpointCallback, callbacks=cbs, logger=wandblogger)
 
     trainer = instantiate(cfg.trainer, **kwds)
 
@@ -92,7 +83,7 @@ def main(cfg: DictConfig):
     # Laod in the best checkpoint and save the model weights
     checkpointPath = checkpointCallback.best_model_path
     # Testing Stage
-    _ = trainer.test(verbose=False, ckpt_path=checkpointPath)
+    _ = trainer.test(verbose=True, ckpt_path=checkpointPath)
 
     # load in the best model weights
     model = Task.load_from_checkpoint(checkpointPath)
