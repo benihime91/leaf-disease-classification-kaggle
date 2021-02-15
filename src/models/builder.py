@@ -68,22 +68,19 @@ class Net(nn.Module):
         self._make_trainable()
         self._init_head()
 
-        self.p_list = [trainable_params(self.encoder), params(self.head)]
-
     def _make_trainable(self):
         "make all the layers trainable and optinally freeze the BN layers of the encoder"
         # make all layers trainable in encoder
-        for param in self.encoder.parameters():
-            param.requires_grad = True
+        for param in self.encoder.parameters():  param.requires_grad = True
         self.encoder.train()
         
         # freeze the batchnorm layers of the encoder
         if self.global_conf.training.bn_freeze:
+            print("[INFO] Freezing all BatchNorm Layers.")
             set_bn_eval(self.encoder)
 
         # make the custom head trainable
-        for param in self.head.parameters():
-            param.requires_grad = True
+        for param in self.head.parameters():  param.requires_grad = True
         self.head.train()
 
     def _init_head(self):
@@ -109,4 +106,4 @@ class Net(nn.Module):
 
     def get_param_list(self):
         "splits the parameters of the Model"
-        return self.p_list
+        return [trainable_params(self.encoder), params(self.head)]

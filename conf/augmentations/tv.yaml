@@ -1,0 +1,66 @@
+# @package augmentations
+backend: torchvision
+
+train:
+  before_mix:
+    - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
+      size: ${input.input_size}
+      interpolation: ${input.interpolation}
+
+    - _target_: torchvision.transforms.RandomHorizontalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ColorJitter
+      brightness: 0.1
+      contrast: 0.1
+      saturation: 0.1
+      hue: 0.0
+
+    - _target_: torchvision.transforms.ToTensor
+
+    - _target_: torchvision.transforms.Normalize
+      mean: ${input.mean}
+      std: ${input.std}
+
+  after_mix:
+    - _target_: timm.data.transforms.RandomResizedCropAndInterpolation
+      size: ${input.input_size}
+      interpolation: ${input.interpolation}
+
+    - _target_: torchvision.transforms.RandomHorizontalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.RandomVerticalFlip
+      p: 0.5
+
+    - _target_: torchvision.transforms.ColorJitter
+      brightness: 0.1
+      contrast: 0.1
+      saturation: 0.1
+      hue: 0.0
+
+    - _target_: torchvision.transforms.ToTensor
+
+    - _target_: torchvision.transforms.Normalize
+      mean: ${input.mean}
+      std: ${input.std}
+
+    - _target_: timm.data.random_erasing.RandomErasing
+      probability: 1.0
+      device: cpu
+      max_count: 1
+      mode: rand
+
+valid:
+  - _target_: torchvision.transforms.Resize
+    size: ${input.input_size}
+    interpolation: 3
+
+  - _target_: torchvision.transforms.ToTensor
+
+  - _target_: torchvision.transforms.Normalize
+    mean: ${input.mean}
+    std: ${input.std}
