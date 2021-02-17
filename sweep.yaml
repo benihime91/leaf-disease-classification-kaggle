@@ -1,0 +1,86 @@
+command:
+  - python
+  - ${program}
+  - --config-name
+  - config
+  - ${args_no_hyphens}
+
+method: grid
+metric:
+  goal: maximize
+  name: test/acc
+parameters:
+  training.fold:
+    values: [1, 2, 3, 4] #[0, 1, 2, 3, 4]
+  training.encoder:
+    distribution: constant
+    value: tf_efficientnet_b4_ns
+  model:
+    distribution: constant
+    value: v0
+  model.base_model.activation:
+    distribution: constant
+    value: mish
+  training.batch_size:
+    distribution: constant
+    value: 16
+  training.accumulate_grad_batches:
+    distribution: constant
+    value: 2
+  augmentations:
+    distribution: constant
+    value: tv
+  data.dataloader.num_workers:
+    distribution: constant
+    value: 4
+  loss:
+    distribution: constant
+    value: bi-tempered-logistic-loss
+  loss.t1:
+    distribution: constant
+    value: 0.8
+  loss.t2:
+    distribution: constant
+    value: 1.6
+  loss.eps:
+    distribution: constant
+    value: 0.05
+  optimizer:
+    distribution: constant
+    value: ranger
+  optimizer.params.weight_decay:
+    distribution: constant
+    value: 0.01
+  scheduler:
+    distribution: constant
+    value: flatcos
+  scheduler.params.pct_start:
+    distribution: constant
+    value: 0.1
+  mixmethod:
+    distribution: constant
+    value: snapmix
+  mixmethod.conf_prob:
+    distribution: constant
+    value: 0.5
+  training.mix_epochs:
+    distribution: constant
+    value: 5
+  training.num_epochs:
+    distribution: constant
+    value: 10
+  trainer.gradient_clip_val:
+    distribution: constant
+    value: 1.0
+  training.learning_rate:
+    distribution: constant
+    value: 8e-03
+  general.project_name:
+    distribution: constant
+    value: cassava-leaf-disease-classification
+  training.unique_idx:
+    distribution: constant
+    value: 6b4248ae
+
+program: train.py
+project: cassava-leaf-disease-classification
