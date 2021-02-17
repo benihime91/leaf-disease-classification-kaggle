@@ -4,7 +4,6 @@ command:
   - --config-name
   - config
   - ${args_no_hyphens}
-
 method: grid
 metric:
   goal: maximize
@@ -81,6 +80,5 @@ parameters:
   training.unique_idx:
     distribution: constant
     value: 6b4248ae
-
 program: train.py
 project: cassava-leaf-disease-classification
